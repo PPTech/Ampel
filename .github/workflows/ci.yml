@@ -1,0 +1,21 @@
+name: ci
+
+on:
+  push:
+    branches: [ main, work ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile
+        run: python3 -m py_compile traffic_ai_assist.py
+      - name: Self-test
+        run: python3 traffic_ai_assist.py --self-test
+      - name: Demo smoke
+        run: python3 traffic_ai_assist.py --demo-mode --db traffic_ai.sqlite3 --lang en | head -n 2
