@@ -1,0 +1,9 @@
+{
+  "name": "DTLD parsing toolkit",
+  "url": "https://github.com/julimueller/dtld_parsing",
+  "scope": "German Traffic Light Dataset parsing and conversion",
+  "license": "Repository license (check upstream before redistribution)",
+  "usage": "Offline parser integration and annotation conversion pipeline",
+  "status": "online_reference",
+  "sample_count": "unknown"
+}

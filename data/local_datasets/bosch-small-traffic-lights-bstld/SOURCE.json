@@ -1,0 +1,9 @@
+{
+  "name": "Bosch small traffic lights (BSTLD)",
+  "url": "https://github.com/bosch-ros-pkg/bstld",
+  "scope": "Traffic light benchmark and tools",
+  "license": "Repository license (check upstream)",
+  "usage": "Benchmark/reference alignment with Bosch stack",
+  "status": "online_reference",
+  "sample_count": "unknown"
+}
