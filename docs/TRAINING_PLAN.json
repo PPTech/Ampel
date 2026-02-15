@@ -1,0 +1,77 @@
+{
+  "version": "0.7.0",
+  "strategy": [
+    "1) Legally download datasets according to upstream terms",
+    "2) Normalize labels and image sizes to unified training schema",
+    "3) Build random balanced train/val/test splits",
+    "4) Train detector baseline (FasterRCNN/RT-DETR) then refine",
+    "5) Run policy A/B tests and safety/security checks",
+    "6) Export edge-ready model for mobile/embedded runtime"
+  ],
+  "datasets": [
+    {
+      "name": "DTLD parsing toolkit",
+      "scope": "German Traffic Light Dataset parsing and conversion",
+      "license": "Repository license (check upstream before redistribution)",
+      "url": "https://github.com/julimueller/dtld_parsing",
+      "usage": "Offline parser integration and annotation conversion pipeline",
+      "status": "online_reference"
+    },
+    {
+      "name": "Kaggle Faster R-CNN notebook (dzhumbek)",
+      "scope": "Model training notebook",
+      "license": "Kaggle terms + notebook-specific terms",
+      "url": "https://www.kaggle.com/code/dzhumbek/traffic-lights-detection-using-fasterr-cnn/notebook",
+      "usage": "Training baseline methodology reference",
+      "status": "online_reference"
+    },
+    {
+      "name": "S2TLD code repository",
+      "scope": "Traffic light detection model implementation",
+      "license": "Repository license (check upstream)",
+      "url": "https://github.com/Thinklab-SJTU/S2TLD",
+      "usage": "Model architecture reference for improved detector",
+      "status": "online_reference"
+    },
+    {
+      "name": "Kaggle Faster R-CNN notebook (aashidutt3)",
+      "scope": "Model training notebook",
+      "license": "Kaggle terms + notebook-specific terms",
+      "url": "https://www.kaggle.com/code/aashidutt3/traffic-light-detection-fasterrcnn/notebook",
+      "usage": "Alternative baseline pipeline",
+      "status": "online_reference"
+    },
+    {
+      "name": "S2TLD XML dataset (Kaggle)",
+      "scope": "Traffic light detection dataset",
+      "license": "Kaggle dataset terms",
+      "url": "https://www.kaggle.com/datasets/sovitrath/s2tld-720x1280-traffic-light-detection-xml-format",
+      "usage": "Primary training data source for traffic lamp detection",
+      "status": "download_required"
+    },
+    {
+      "name": "Chinese Traffic Signs dataset (Kaggle)",
+      "scope": "Traffic signs classification/detection",
+      "license": "Kaggle dataset terms",
+      "url": "https://www.kaggle.com/datasets/dmitryyemelyanov/chinese-traffic-signs/data",
+      "usage": "Road sign domain coverage",
+      "status": "download_required"
+    },
+    {
+      "name": "LISA traffic-light reference",
+      "scope": "Traffic light dataset metadata and links",
+      "license": "Refer to original LISA dataset terms",
+      "url": "https://datasetninja.com/lisa-traffic-light",
+      "usage": "Signal-state examples and metadata validation",
+      "status": "online_reference"
+    },
+    {
+      "name": "Mendeley traffic light dataset",
+      "scope": "Traffic-light related dataset",
+      "license": "Mendeley dataset license (verify upstream)",
+      "url": "https://data.mendeley.com/datasets/9tm59d3nsn/1",
+      "usage": "Additional training/validation diversity",
+      "status": "download_required"
+    }
+  ]
+}
