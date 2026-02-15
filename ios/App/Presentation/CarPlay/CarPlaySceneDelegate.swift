@@ -2,6 +2,7 @@
 // License: MIT
 // Code generated with support from CODEX and CODEX CLI.
 // Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+// Author: Dr. Babak Sorkhpour with support from ChatGPT
 
 import CarPlay
 import Foundation
@@ -9,6 +10,7 @@ import UIKit
 import MapboxNavigation
 
 final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
+    private let allowHeadUnitVideo = false // policy guard: no live camera feed on CarPlay
     private var interfaceController: CPInterfaceController?
     private var mapTemplate: CPMapTemplate?
     private let alertManager = CarPlayAlertManager()
@@ -42,6 +44,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     }
 
     private func configureMapboxNavigationIfAvailable() {
+        guard allowHeadUnitVideo == false else { return }
         // Example hook for Mapbox integration in production app:
         let token = MapboxConfig.accessToken
         _ = token

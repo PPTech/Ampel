@@ -3,4 +3,7 @@
 # Code generated with support from CODEX and CODEX CLI.
 # Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 # Author: Dr. Babak Sorkhpour with support from ChatGPT
--r requirements/base.txt
+numpy==1.26.4
+opencv-python==4.10.0.84
+tensorflow==2.16.1
+tflite-runtime==2.14.0

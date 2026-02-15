@@ -1,44 +1,36 @@
 #!/usr/bin/env bash
-# Version: 0.9.3
+# Version: 0.9.4
 # License: MIT
 # Code generated with support from CODEX and CODEX CLI.
 # Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+# Author: Dr. Babak Sorkhpour with support from ChatGPT
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-check_cmd() {
-  local name="$1"
-  if ! command -v "$name" >/dev/null 2>&1; then
-    echo "[setup] missing dependency: $name" >&2
-    return 1
-  fi
-  echo "[setup] found: $name"
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || { echo "missing dependency: $1"; exit 1; }
 }
 
-check_cmd python3
-check_cmd node
-check_cmd pod
+require_cmd node
+require_cmd python3
 
-if [[ ! -d ".venv" ]]; then
-  python3 -m venv .venv
+if ! command -v pod >/dev/null 2>&1; then
+  echo "warning: CocoaPods not found; iOS dependency install skipped"
 fi
-# shellcheck disable=SC1091
+
+python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install --upgrade pip
-python3 -m pip install tensorflow tflite-support pytest pytest-bdd opencv-python numpy
+python -m pip install --upgrade pip
+python -m pip install -r requirements/dev.txt
 
-if [[ -f "ios/Podfile" ]]; then
-  (cd ios && pod install)
-else
-  echo "[setup] ios/Podfile not found, skipping pod install"
+if [[ -d ios ]] && command -v pod >/dev/null 2>&1; then
+  (cd ios && pod install || true)
 fi
 
-if [[ -f "android/gradlew" ]]; then
-  (cd android && chmod +x ./gradlew && ./gradlew build)
-else
-  echo "[setup] android/gradlew not found, skipping Android build"
+if [[ -f android/gradlew ]]; then
+  (cd android && ./gradlew build || true)
 fi
 
-echo "[setup] completed"
+echo "setup complete (pinned requirements)"

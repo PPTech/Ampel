@@ -4,6 +4,7 @@ Version: 0.9.3
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+Author: Dr. Babak Sorkhpour with support from ChatGPT
 """
 
 from __future__ import annotations
@@ -12,6 +13,9 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from typing import Deque, List, Optional, Tuple
+
+from ampel_app.ai.detector import classify_color, fuse_state
+from ampel_app.core.models import TrafficLightState
 
 try:
     import numpy as np
@@ -24,6 +28,7 @@ except ModuleNotFoundError:  # pragma: no cover
 @dataclass(frozen=True)
 class DetectionResult:
     label: str
+    state: TrafficLightState
     score: float
     bbox_xywh: Tuple[float, float, float, float]
 
@@ -67,12 +72,13 @@ class TrafficLightDetector:
       return a fail-safe warning for the driver.
     """
 
-    def __init__(self, model_path: str, threshold: float = 0.35) -> None:
+    def __init__(self, model_path: str, threshold: float = 0.35, label_map: Optional[dict[int, str]] = None) -> None:
         self.model_path = model_path
         self.threshold = threshold
         self.interpreter = self._load_interpreter(model_path)
         self.state_buffer = StateBuffer(size=3)
         self.last_light_seen_ts = time.monotonic()
+        self.label_map = label_map or {0: "red_light", 1: "yellow_light", 2: "green_light"}
 
     @staticmethod
     def _load_interpreter(model_path: str):
@@ -114,8 +120,13 @@ class TrafficLightDetector:
                 if s < self.threshold:
                     continue
                 y1, x1, y2, x2 = [float(v) for v in boxes[0][i]]
-                label = f"class_{int(classes[0][i])}"
-                results.append(DetectionResult(label=label, score=s, bbox_xywh=(x1, y1, x2 - x1, y2 - y1)))
+                cls_id = int(classes[0][i])
+                label = self.label_map.get(cls_id, f"class_{cls_id}")
+                model_state = TrafficLightState.RED if "red" in label else TrafficLightState.YELLOW if "yellow" in label else TrafficLightState.GREEN if "green" in label else TrafficLightState.UNKNOWN
+                crop = image[int(y1 * image.shape[0]):int(y2 * image.shape[0]), int(x1 * image.shape[1]):int(x2 * image.shape[1])]
+                color_state, color_conf = classify_color(crop)
+                fused = fuse_state(model_state, s, color_state, color_conf)
+                results.append(DetectionResult(label=label, state=fused.state, score=fused.score, bbox_xywh=(x1, y1, x2 - x1, y2 - y1)))
             return results
         return []
 
@@ -133,14 +144,14 @@ class TrafficLightDetector:
             return TemporalAlertResult("Scanning...", "scanning", None, 0)
 
         self.last_light_seen_ts = now
-        state = winning.label.lower()
-        if state not in {"red_light", "green_light"}:
+        state = winning.state.value
+        if state not in {"red", "green"}:
             return TemporalAlertResult("Scanning...", "scanning", winning, 0)
 
         persisted = self.state_buffer.push(state)
         if persisted >= 3:
             return TemporalAlertResult(
-                message=f"Valid Alert: {state}",
+                message=f"Valid Alert: {state}_light",
                 status="valid_alert",
                 detection=winning,
                 buffer_count=persisted,
@@ -150,8 +161,9 @@ class TrafficLightDetector:
     @staticmethod
     def _select_traffic_light(detections: List[DetectionResult]) -> Optional[DetectionResult]:
         candidates = [
-            d for d in detections
-            if d.label.lower() in {"red_light", "green_light"} and d.score > 0.85
+            d
+            for d in detections
+            if d.state in {TrafficLightState.RED, TrafficLightState.GREEN} and d.score > 0.85
         ]
         if not candidates:
             return None

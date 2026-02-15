@@ -3,4 +3,12 @@
 # Code generated with support from CODEX and CODEX CLI.
 # Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 # Author: Dr. Babak Sorkhpour with support from ChatGPT
--r requirements/base.txt
+-r base.txt
+black==24.10.0
+ruff==0.6.9
+mypy==1.11.2
+pytest==8.3.3
+pytest-bdd==7.3.0
+bandit==1.7.9
+pre-commit==3.8.0
+pip-tools==7.4.1

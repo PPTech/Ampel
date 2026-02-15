@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.9.3] - 2026-02-15
+## [0.9.4] - 2026-02-15
 ### Added
 - Added ISO-26262 style temporal consistency filter (`StateBuffer`) for traffic-light alert validation in `traffic_light_detector.py`.
 - Added fail-safe "Check Traffic Light" warning when no light is detected for >5s at intersections.

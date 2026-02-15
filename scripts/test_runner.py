@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Version: 0.9.3
+Version: 0.9.4
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+Author: Dr. Babak Sorkhpour with support from ChatGPT
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ def run_bdd_features() -> Dict[str, object]:
     feature_files = sorted(str(p) for p in FEATURES_DIR.glob("*.feature"))
     if not feature_files:
         return {"executed": False, "reason": "no feature files"}
-    cmd = ["python3", "-m", "pytest", "-q"] + feature_files
+    cmd = ["python3", "-m", "pytest", "-q", "tests"]
     proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
     return {
         "executed": True,
@@ -63,6 +64,11 @@ def run_privacy_audit() -> Dict[str, object]:
         r"print\(.*latitude",
         r"print\(.*longitude",
         r"logger\..*license_plate",
+        r"print\(.*plate",
+        r"logger\..*(raw_frame|frame_payload|frame_bytes)",
+        r"print\(.*(raw_frame|frame_payload|frame_bytes)",
+        r"print\(.*uiimage",
+        r"print\(.*bitmap",
     ]
     hits: List[Dict[str, object]] = []
     for py_file in REPO_ROOT.rglob("*.py"):

@@ -3,6 +3,7 @@
 # License: MIT
 # Code generated with support from CODEX and CODEX CLI.
 # Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+# Author: Dr. Babak Sorkhpour with support from ChatGPT
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"

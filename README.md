@@ -1,6 +1,6 @@
 # 🚦 Ampel - Traffic AI Assist
 
-> **Version:** `0.9.3`  
+> **Version:** `0.9.4`  
 > **License: MIT**  
 > **Code generated with support from CODEX and CODEX CLI.**  
 > **Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)**
@@ -213,7 +213,7 @@ Generated structure:
 - Never hardcode tokens in source files.
 
 
-## v0.9.3 Safety & QA Additions
+## v0.9.4 Safety & QA Additions
 
 | Command | Purpose |
 |---|---|
@@ -221,3 +221,14 @@ Generated structure:
 | `python3 -m py_compile ai_engine/inference/traffic_light_detector.py ai_engine/inference/debug/camera_source_injector.py` | Validate temporal filter + camera injector modules compile cleanly. |
 
 The temporal consistency filter now requires 3 consecutive high-confidence frames before emitting red/green light alerts and triggers a fail-safe warning when no signal is seen near an intersection for more than 5 seconds.
+
+
+## In-car UI policy
+
+See `docs/IN_CAR_UI_CONSTRAINTS.md` for CarPlay/Android Auto guardrails (no raw camera streaming to head unit).
+
+
+## GDPR operations
+
+- `python3 traffic_ai_assist.py --gdpr-export`
+- `python3 traffic_ai_assist.py --gdpr-erase --retention-days 30`

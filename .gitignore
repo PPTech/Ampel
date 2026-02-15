@@ -15,3 +15,7 @@ ios/Config.xcconfig
 
 # Local debug media
 assets/test_drive_red_light.mp4
+
+# Python build artifacts
+__pycache__/
+**/__pycache__/
