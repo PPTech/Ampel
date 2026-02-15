@@ -1,0 +1,14 @@
+# Version: 0.9.2
+# License: MIT
+# Code generated with support from CODEX and CODEX CLI.
+# Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+
+.venv/
+__pycache__/
+*.pyc
+traffic_ai.sqlite3
+traffic_ai.log
+
+# Secrets (must stay local)
+android/local.properties
+ios/Config.xcconfig
