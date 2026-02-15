@@ -1,0 +1,22 @@
+[
+  {
+    "name": "BDD100K",
+    "url": "https://bdd-data.berkeley.edu/",
+    "error": "<urlopen error timed out>"
+  },
+  {
+    "name": "Bosch Small Traffic Lights",
+    "url": "https://hci.iwr.uni-heidelberg.de/node/6132",
+    "sample": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML+RDFa 1.0//EN\"  \"http://www.w3.org/MarkUp/DTD/xhtml-rdfa-1.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\" dir=\"ltr\"\n  xmlns:content=\"http://purl.org/rss/1.0/modules/content/\"\n  xmlns:dc=\"http://purl.org/dc/terms/\"\n  xmlns:foaf=\"http://xmlns.com/foaf/0.1/\"\n  xmlns:og=\"http://ogp.me/ns#\"\n  xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n  xmlns:sioc=\"http://rdfs.org/sioc/ns#\"\n  xmlns:sioct=\"http://rdfs.org/sioc/types#\"\n  xmlns:skos=\"http://w"
+  },
+  {
+    "name": "LISA Traffic Light Dataset",
+    "url": "https://cvrr.ucsd.edu/LISA/lisa-traffic-light-dataset.html",
+    "error": "HTTP Error 404: Not Found"
+  },
+  {
+    "name": "Mapillary Traffic Sign Dataset",
+    "url": "https://www.mapillary.com/dataset/vistas",
+    "sample": "<!DOCTYPE html>\n<html lang=\"en\" id=\"facebook\" class=\"no_js\">\n<head><meta charset=\"utf-8\" /><meta name=\"referrer\" content=\"default\" id=\"meta_referrer\" /><script nonce=\"QxTc9HGO\">function envFlush(e){function t(t){for(var n in e)t[n]=e[n]}window.requireLazy?window.requireLazy([\"Env\"],t):(window.Env=window.Env||{},t(window.Env))}envFlush({\"useTrustedTypes\":true,\"isTrustedTypesReportOnly\":true,\"ajaxpipe_token\":\"AXlh04_ta3IfhLM3BDg\",\"stack_trace_limit\":30,\"timesliceBufferSize\":5000,\"show_invariant_decoder\":false"
+  }
+]

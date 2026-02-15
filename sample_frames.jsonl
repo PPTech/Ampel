@@ -1,0 +1,1 @@
+{"route_id":"R100","timestamp_ms":1730000000000,"candidates":[{"light_id":"L-A","state":"red","lane_ids":["lane-1"],"confidence":0.91}],"vehicle":{"speed_kph":50,"lane_id":"lane-1","crossed_stop_line":false,"stationary_seconds":0},"extra":{"pedestrian_detected":false,"road_signs":["speed_50"]}}

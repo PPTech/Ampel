@@ -1,0 +1,28 @@
+{
+  "datasets": [
+    {
+      "name": "BDD100K",
+      "scope": "traffic lights, lanes, drivable area",
+      "license": "Berkeley DeepDrive terms",
+      "url": "https://bdd-data.berkeley.edu/"
+    },
+    {
+      "name": "Bosch Small Traffic Lights",
+      "scope": "traffic light detection",
+      "license": "Bosch dataset terms",
+      "url": "https://hci.iwr.uni-heidelberg.de/node/6132"
+    },
+    {
+      "name": "LISA Traffic Light Dataset",
+      "scope": "traffic lights",
+      "license": "Academic usage terms",
+      "url": "https://cvrr.ucsd.edu/LISA/lisa-traffic-light-dataset.html"
+    },
+    {
+      "name": "Mapillary Traffic Sign Dataset",
+      "scope": "road signs",
+      "license": "Mapillary Vistas terms",
+      "url": "https://www.mapillary.com/dataset/vistas"
+    }
+  ]
+}
