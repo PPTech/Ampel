@@ -1,0 +1,9 @@
+{
+  "name": "Kaggle LISA Traffic Light dataset",
+  "url": "https://www.kaggle.com/datasets/mbornoe/lisa-traffic-light-dataset/data",
+  "scope": "Traffic light detection/classification",
+  "license": "Kaggle dataset terms",
+  "usage": "LISA-based training/validation",
+  "status": "download_required",
+  "sample_count": "unknown"
+}
