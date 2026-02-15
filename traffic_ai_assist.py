@@ -518,6 +518,57 @@ class TrafficAPIHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:
+        if self.path == "/":
+            self._write(
+                HTTPStatus.OK,
+                {
+                    "service": "traffic-ai-assist",
+                    "version": SEMVER,
+                    "algorithm": [
+                        "1) Parse frame context from input payload",
+                        "2) Resolve lane-specific traffic light (or memory suggestion)",
+                        "3) Evaluate safety rules (pedestrian, red crossing, overspeed, green wait)",
+                        "4) Return localized alert + overlays and audit event",
+                    ],
+                    "endpoints": {
+                        "GET": ["/", "/health", "/bdd"],
+                        "POST": ["/ingest/frame", "/feedback/select-light", "/agent/chat", "/logs/parse"],
+                    },
+                    "examples": {
+                        "ingest_frame": {
+                            "method": "POST",
+                            "path": "/ingest/frame",
+                            "body": {
+                                "route_id": "R100",
+                                "timestamp_ms": 1730000000000,
+                                "candidates": [
+                                    {
+                                        "light_id": "L-A",
+                                        "state": "red",
+                                        "lane_ids": ["lane-1"],
+                                        "confidence": 0.91,
+                                    }
+                                ],
+                                "vehicle": {
+                                    "speed_kph": 50,
+                                    "lane_id": "lane-1",
+                                    "crossed_stop_line": False,
+                                    "stationary_seconds": 0,
+                                },
+                                "camera": {"angle_score": 0.9, "focus_score": 0.9, "fps": 30},
+                                "signs": ["speed_limit_50"],
+                                "pedestrians_detected": False,
+                            },
+                        },
+                        "agent_chat": {
+                            "method": "POST",
+                            "path": "/agent/chat",
+                            "body": {"text": "status", "lang": "en"},
+                        },
+                    },
+                },
+            )
+            return
         if self.path == "/health":
             self._write(HTTPStatus.OK, {"status": "ok", "version": SEMVER})
             return
