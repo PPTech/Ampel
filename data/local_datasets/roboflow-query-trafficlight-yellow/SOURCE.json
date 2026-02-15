@@ -1,0 +1,9 @@
+{
+  "name": "Roboflow query trafficlight yellow",
+  "url": "https://universe.roboflow.com/search?q=class%3A%22trafficlight+yellow%22",
+  "scope": "Traffic-light yellow class focused search",
+  "license": "Roboflow universe terms",
+  "usage": "Class balance search for yellow lights",
+  "status": "online_reference",
+  "sample_count": "unknown"
+}

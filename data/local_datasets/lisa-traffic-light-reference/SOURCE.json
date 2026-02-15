@@ -1,0 +1,9 @@
+{
+  "name": "LISA traffic-light reference",
+  "url": "https://datasetninja.com/lisa-traffic-light",
+  "scope": "Traffic light dataset metadata and links",
+  "license": "Refer to original LISA dataset terms",
+  "usage": "Signal-state examples and metadata validation",
+  "status": "online_reference",
+  "sample_count": "unknown"
+}

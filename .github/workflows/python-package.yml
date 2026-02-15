@@ -1,0 +1,24 @@
+# License: MIT
+# Code generated with support from CODEX and CODEX CLI.
+# Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+name: Python package
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: build
+        run: |
+          python3 -m py_compile traffic_ai_assist.py scripts/dataset_manager.py
+          python3 scripts/dataset_manager.py --compile-manifest

@@ -1,0 +1,26 @@
+# License: MIT
+# Code generated with support from CODEX and CODEX CLI.
+# Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+name: ci
+
+on:
+  push:
+    branches: [ main, work ]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python3 -m py_compile traffic_ai_assist.py scripts/dataset_manager.py
+      - run: python3 scripts/dataset_manager.py --compile-manifest
+      - run: python3 scripts/dataset_manager.py --sync
+      - run: python3 scripts/dataset_manager.py --build-training-plan docs/TRAINING_PLAN.json
+      - run: python3 traffic_ai_assist.py --self-test
+      - run: python3 traffic_ai_assist.py --ab-test --db traffic_ai.sqlite3
+      - run: python3 traffic_ai_assist.py --security-check
+      - run: python3 traffic_ai_assist.py --generate-bdd features/traffic_ai_agent.feature
