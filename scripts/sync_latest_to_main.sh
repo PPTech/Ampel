@@ -101,12 +101,9 @@ mapfile -t dirty_files < <(
 
 if (( ${#dirty_files[@]} > 0 )); then
   non_runtime=()
-  runtime_dirty=()
   for file in "${dirty_files[@]}"; do
     if ! is_runtime_path "$file"; then
       non_runtime+=("$file")
-    else
-      runtime_dirty+=("$file")
     fi
   done
 
@@ -116,11 +113,9 @@ if (( ${#dirty_files[@]} > 0 )); then
     exit 2
   fi
 
-  if (( ${#runtime_dirty[@]} > 0 )); then
-    log "stashing runtime drift"
-    git stash push -u -m "$STASH_NAME" -- "${runtime_dirty[@]}" >/dev/null
-    stash_created=1
-  fi
+  log "stashing runtime drift"
+  git stash push -u -m "$STASH_NAME" -- "${RUNTIME_PATHS[@]}" >/dev/null
+  stash_created=1
 fi
 
 log "fetching from $REMOTE"
