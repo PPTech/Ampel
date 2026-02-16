@@ -1,6 +1,6 @@
 # Ampel — Samsung-First Traffic Light Assistant (PR-0)
 
-Version: 0.9.14  
+Version: 0.9.15  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)  
@@ -93,3 +93,10 @@ Ampel is being migrated from Python prototype scripts to a production-grade Sams
 - Tunnel-mode location handling to avoid GPS-loss false stop-and-go alerts.
 - Samsung chipset-aware TFLite delegate factory (Exynos GPU preference, Snapdragon NNAPI preference, CPU fallback).
 - Dashboard now supports YouTube link analysis and real-time overlay messages/boxes over uploaded media modes.
+
+
+## Phase 7.1 Repo Stabilization & CI Unification
+
+- Single CI workflow now runs on `master` with Predictive Test Selection and hygiene gates.
+- Threat model documented in `docs/THREAT_MODEL.md`.
+- Runtime artifacts are blocked from git by `.gitignore` and CI checks.

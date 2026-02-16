@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.15] - 2026-02-16
+### Added
+- Threat model document `docs/THREAT_MODEL.md` defining assets, attackers, trust boundaries, and mitigations.
+- Unified CI workflow on `master` branch with PTS, hygiene, brain, gadget, and android stages in `.github/workflows/ci.yml`.
+
+### Changed
+- Consolidated duplicate workflows into a single source of truth (`ci.yml`) and removed redundant workflow files.
+- Improved PTS path mapping in `scripts/pts_selector.py` for `src/core/**`, `src/ampel_app/**`, `proto/python/**`, `mobile/**`, `gadget/**`, and `hal/runtime/**`.
+- Expanded `.gitignore` runtime artifact exclusions (`*.log`, `*.zip`, `*.sqlite3`, diagnostics outputs).
+- Fixed Android `AlertManager.kt` initialization safety for TTS and maintained ducking audio focus behavior.
+
 ## [0.9.14] - 2026-02-16
 ### Added
 - Phase 7 Android runtime modules: `AlertManager.kt` (audio ducking focus), `LocationManager.kt` (tunnel-mode dead reckoning), and `TFLiteDelegateFactory.kt` (Samsung chipset-aware delegate strategy with CPU fallback).

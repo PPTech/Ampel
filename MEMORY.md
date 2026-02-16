@@ -1,6 +1,6 @@
 # MEMORY.md
 
-Version: 0.9.14  
+Version: 0.9.15  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -51,3 +51,7 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 - Phase 7 adds audio ducking, tunnel-mode dead reckoning, Samsung delegate strategy, and lux-based UI adaptation for real-world stability.
 
 - Dashboard now supports YouTube-link analysis timeline with over-media detection boxes and action text.
+
+- Phase 7.1 consolidates CI into a single master-branch workflow with PTS and artifact hygiene enforcement.
+
+- Threat model documentation added to formalize trust boundaries and defense-in-depth assumptions.

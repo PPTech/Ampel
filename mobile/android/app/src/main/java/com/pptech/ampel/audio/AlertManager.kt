@@ -1,5 +1,5 @@
 /*
-Version: 0.9.14
+Version: 0.9.15
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -16,9 +16,13 @@ import java.util.Locale
 
 class AlertManager(context: Context) {
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    private val tts = TextToSpeech(context) { status ->
-        if (status == TextToSpeech.SUCCESS) {
-            tts.language = Locale.US
+    private lateinit var tts: TextToSpeech
+
+    init {
+        tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts.language = Locale.US
+            }
         }
     }
 

@@ -116,3 +116,12 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 4. TFLiteDelegateFactory chooses delegate by Samsung chipset (Exynos->GPU, Snapdragon->NNAPI) and falls back to CPU on initialization exceptions.
 5. MainScreen adapts rendering by ambient lux for true-black night mode and high-contrast bright-sun mode.
 6. Dashboard media mode pipeline now supports photo/video/YouTube with frame-message overlays and traffic sign/light boxes.
+
+
+## Phase 7.1 CI and Hygiene Control Flow
+
+1. PTS maps changed files to platform test scopes.
+2. Hygiene-fast stage always runs lint, formatting, and py_compile.
+3. Runtime artifact scanner blocks checked-in logs/db/zip artifacts.
+4. Brain tests run unit + BDD + self/security checks.
+5. Android and gadget jobs run only when selected by PTS.

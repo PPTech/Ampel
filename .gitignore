@@ -26,3 +26,10 @@ ios/Config.xcconfig
 # Runtime files
 traffic_ai.sqlite3
 traffic_ai.log
+
+*.log
+*.zip
+failure_report.zip
+*.sqlite3
+**/*.sqlite3
+data/generated/
