@@ -1,5 +1,5 @@
 """
-Version: 0.9.12
+Version: 0.9.15
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -25,3 +25,10 @@ def test_gadget_change_runs_gadget_only() -> None:
     out = choose_targets(["gadget/linux/driver.py"])
     assert out.run_android is False
     assert out.run_gadget is True
+
+
+def test_core_python_change_runs_brain_only() -> None:
+    out = choose_targets(["src/ampel_app/cli.py"])
+    assert out.run_brain is True
+    assert out.run_android is False
+    assert out.run_gadget is False

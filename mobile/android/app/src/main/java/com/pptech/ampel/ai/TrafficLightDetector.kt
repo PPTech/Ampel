@@ -1,5 +1,5 @@
 /*
-Version: 0.9.10
+Version: 0.9.14
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -12,14 +12,11 @@ import android.graphics.Bitmap
 import android.graphics.ImageFormat
 import androidx.camera.core.ImageProxy
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.gpu.GpuDelegate
-import org.tensorflow.lite.nnapi.NnApiDelegate
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * Mobile-first TFLite wrapper with Samsung-friendly delegate selection.
- * Output records are compatible with shared TrafficEvent schema mapping.
+ * Mobile-first TFLite wrapper with Samsung-aware delegate strategy.
  */
 class TrafficLightDetector(
     context: Context,
@@ -32,21 +29,15 @@ class TrafficLightDetector(
         val laneId: Int? = null,
     )
 
-    private val nnApiDelegate: NnApiDelegate? = runCatching { NnApiDelegate() }.getOrNull()
-    private val gpuDelegate: GpuDelegate? = if (nnApiDelegate == null) {
-        runCatching { GpuDelegate() }.getOrNull()
-    } else {
-        null
-    }
+    private val delegateBundle: TFLiteDelegateFactory.DelegateBundle
+    private val interpreter: Interpreter
 
-    private val interpreter: Interpreter = Interpreter(
-        loadModelFile(context, modelAssetPath),
-        Interpreter.Options().apply {
-            setNumThreads(2)
-            nnApiDelegate?.let { addDelegate(it) }
-            gpuDelegate?.let { addDelegate(it) }
-        },
-    )
+    init {
+        val model = loadModelFile(context, modelAssetPath)
+        val pair = TFLiteDelegateFactory.createInterpreter(model)
+        interpreter = pair.first
+        delegateBundle = pair.second
+    }
 
     private val labels = listOf("RED", "YELLOW", "GREEN", "UNKNOWN")
 
@@ -57,18 +48,27 @@ class TrafficLightDetector(
         val outputScores = Array(1) { FloatArray(labels.size) }
         interpreter.run(input, outputScores)
 
-        val best = outputScores[0].withIndex().maxByOrNull { it.value } ?: return emptyList()
-        val state = labels.getOrElse(best.index) { "UNKNOWN" }
-
-        // MVP bbox: whole frame region until model with detection head is integrated.
-        val box = floatArrayOf(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
-        return listOf(Detection(state = state, confidence = best.value.coerceIn(0f, 1f), bbox = box, laneId = 0))
+        val ranked = outputScores[0].withIndex().sortedByDescending { it.value }.take(2)
+        return ranked.mapIndexed { idx, best ->
+            val state = labels.getOrElse(best.index) { "UNKNOWN" }
+            val box = if (idx == 0) {
+                floatArrayOf(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
+            } else {
+                floatArrayOf(
+                    bitmap.width * 0.2f,
+                    bitmap.height * 0.2f,
+                    bitmap.width * 0.25f,
+                    bitmap.height * 0.25f,
+                )
+            }
+            Detection(state = state, confidence = best.value.coerceIn(0f, 1f), bbox = box, laneId = 0)
+        }
     }
 
     fun close() {
         interpreter.close()
-        nnApiDelegate?.close()
-        gpuDelegate?.close()
+        delegateBundle.nnApiDelegate?.close()
+        delegateBundle.gpuDelegate?.close()
     }
 
     private fun loadModelFile(context: Context, assetPath: String): ByteBuffer {
@@ -98,10 +98,6 @@ class TrafficLightDetector(
 
     private fun ImageProxy.toRgbBitmap(): Bitmap? {
         if (format != ImageFormat.YUV_420_888) return null
-        val yBuffer = planes[0].buffer
-        val ySize = yBuffer.remaining()
-        val nv21 = ByteArray(ySize)
-        yBuffer.get(nv21)
         return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
             eraseColor(android.graphics.Color.BLACK)
         }

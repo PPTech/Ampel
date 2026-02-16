@@ -1,6 +1,6 @@
 # ATTRIBUTION
 
-Version: 0.9.4  
+Version: 0.9.7  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)

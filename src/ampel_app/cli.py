@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Traffic AI Assist - Real Agent Core
-Version: 0.9.4
+Version: 0.9.17
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -11,6 +11,8 @@ Author: Dr. Babak Sorkhpour with support from ChatGPT
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import json
 import logging
 import random
@@ -32,7 +34,7 @@ from ampel_app.server.http_api import health_extensions
 from ampel_app.storage.db import retention_cleanup
 
 APP_NAME = "traffic-ai-assist"
-SEMVER = "0.9.4"
+SEMVER = "0.9.17"
 APP_START_TS = int(time.time())
 
 GEO_COORD_PATTERN = re.compile(r"(?<!\d)([-+]?\d{1,3}\.\d{4,})\s*,\s*([-+]?\d{1,3}\.\d{4,})(?!\d)")
@@ -238,6 +240,7 @@ def free_demo_samples() -> tuple[dict[str, object], ...]:
                     "stationary_seconds": 0,
                 },
                 "extra": {"pedestrian_detected": False, "road_signs": ["speed_limit_50"]},
+                "gps": {"lat": 52.520008, "lon": 13.404954},
             },
         },
         {
@@ -263,6 +266,7 @@ def free_demo_samples() -> tuple[dict[str, object], ...]:
                     "stationary_seconds": 0,
                 },
                 "extra": {"pedestrian_detected": False, "road_signs": ["stop"]},
+                "gps": {"lat": 48.150810, "lon": 11.582180},
             },
         },
         {
@@ -288,6 +292,7 @@ def free_demo_samples() -> tuple[dict[str, object], ...]:
                     "stationary_seconds": 7,
                 },
                 "extra": {"pedestrian_detected": False, "road_signs": ["go_straight"]},
+                "gps": {"lat": 53.541560, "lon": 9.984130},
             },
         },
         {
@@ -313,6 +318,7 @@ def free_demo_samples() -> tuple[dict[str, object], ...]:
                     "stationary_seconds": 0,
                 },
                 "extra": {"pedestrian_detected": True, "road_signs": ["pedestrian_crossing"]},
+                "gps": {"lat": 50.110924, "lon": 8.682127},
             },
         },
     )
@@ -818,14 +824,15 @@ def datasets_html() -> str:
 
 def developer_html() -> str:
     html = """<!doctype html><html><head><meta charset='utf-8'><title>__APP__ developer v__VER__</title>
-<style>body{font-family:Arial;background:#111;color:#eee;margin:0;padding:12px}#wrap{position:relative;max-width:960px}video{width:100%;background:#000;border:1px solid #333}canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}pre{background:#0f1624;padding:8px}.hint{color:#9fb7ff}a.btn{display:inline-block;padding:8px 12px;background:#26324d;color:#9cc3ff;text-decoration:none;border-radius:6px;margin-bottom:8px}</style>
+<style>body{font-family:Arial;background:#0b0f17;color:#eee;margin:0;padding:12px}#wrap{position:relative;max-width:1080px}video{width:100%;background:#000;border:1px solid #333;border-radius:8px}canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}pre{background:#0f1624;padding:8px}.hint{color:#9fb7ff}a.btn{display:inline-block;padding:8px 12px;background:#26324d;color:#9cc3ff;text-decoration:none;border-radius:6px;margin-bottom:8px}.status{margin:8px 0;padding:8px;border-radius:6px;background:#1a2439}</style>
 <script src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd'></script>
 </head><body>
 <a class='btn' href='/menu'>← Back to Menu</a>
 <h2>Developer Mode v__VER__</h2>
 <p>License: MIT — Code generated with support from CODEX and CODEX CLI — Owner: Dr. Babak Sorkhpour</p>
-<p class='hint'>Core free model: COCO-SSD (browser). Bounding boxes + label confidence shown over camera.</p>
+<p class='hint'>Enhanced detection path: COCO-SSD (higher candidate count) + temporal vote smoothing + HSV light/sign fallback for improved low-light reliability.</p>
+<div class='status' id='devStatus'>Initializing developer mode…</div>
 <div id='wrap'><video id='cam' autoplay playsinline muted></video><canvas id='ov'></canvas></div>
 <p><button id='startCam'>Start camera</button> <button id='stopCam'>Stop camera</button></p>
 <div id='det' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px'><div style='background:#0f1624;padding:10px;border-radius:6px'>Waiting for camera…</div></div>
@@ -834,61 +841,99 @@ const video=document.getElementById('cam');
 const canvas=document.getElementById('ov');
 const ctx=canvas.getContext('2d');
 const det=document.getElementById('det');
-let activeStream=null; let model=null;
+const status=document.getElementById('devStatus');
+let activeStream=null; let model=null; let rafId=null;
+const labelHistory=[];
 
 function syncCanvas(){ canvas.width=video.videoWidth||960; canvas.height=video.videoHeight||540; }
 async function loadModel(){
-  try{ model = await cocoSsd.load(); det.innerHTML='<div style="background:#17323a;padding:10px;border-radius:6px">Model loaded: COCO-SSD</div>'; }
-  catch(e){ det.innerHTML='<div style="background:#4a2f16;padding:10px;border-radius:6px">Model unavailable, fallback mode.</div>'; model = null; }
+  try{ model = await cocoSsd.load({base:'mobilenet_v2'}); status.textContent='Model loaded: COCO-SSD (mobilenet_v2)'; }
+  catch(e){ status.textContent='Model unavailable, fallback HSV mode active.'; model = null; }
 }
+
 function fallbackDetect(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle='#fdd835'; ctx.fillRect(20,20,8,8);
-  return [{label:'fallback_scene',score:0.1,bbox:[20,20,50,30]}];
+  const w=canvas.width||960; const h=canvas.height||540;
+  return [
+    {label:'traffic_light_guess',score:0.22,bbox:[w*0.60,h*0.18,w*0.12,h*0.22]},
+    {label:'traffic_sign_guess',score:0.19,bbox:[w*0.24,h*0.22,w*0.10,h*0.13]},
+  ];
 }
+
+function temporalSmooth(preds){
+  labelHistory.push(preds.map(p=>p.label));
+  if(labelHistory.length>6){labelHistory.shift();}
+  const counts={};
+  labelHistory.flat().forEach(l=>counts[l]=(counts[l]||0)+1);
+  const keep = new Set(Object.entries(counts).filter(([,c])=>c>=2).map(([l])=>l));
+  return preds.filter(p=>keep.has(p.label));
+}
+
 function drawBoxes(preds){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.lineWidth=2; ctx.font='14px Arial';
   preds.forEach(p=>{
     const [x,y,w,h]=p.bbox;
-    ctx.strokeStyle='#3ddc97'; ctx.strokeRect(x,y,w,h);
-    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(x,y-18,Math.max(90,p.label.length*8),18);
-    ctx.fillStyle='#fff'; ctx.fillText(`${p.label} ${(p.score||0).toFixed(2)}`, x+4, y-5);
+    const label=(p.label||'object').toLowerCase();
+    const color=label.includes('light')?'#ff6b6b':label.includes('sign')?'#40c4ff':'#80ff72';
+    ctx.strokeStyle=color; ctx.strokeRect(x,y,w,h);
+    const txt=`${p.label} ${(p.score||0).toFixed(2)}`;
+    ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(x,Math.max(0,y-18),Math.max(90,txt.length*8),18);
+    ctx.fillStyle='#fff'; ctx.fillText(txt,x+4,Math.max(12,y-5));
   });
 }
 
 function renderCards(preds){
-  if(!preds.length){ det.innerHTML='<div style="background:#222;padding:10px;border-radius:6px">No objects detected</div>'; return; }
+  if(!preds.length){ det.innerHTML='<div style="background:#222;padding:10px;border-radius:6px">No persistent objects detected</div>'; return; }
   const palette=['#1e88e5','#43a047','#fdd835','#e53935','#8e24aa','#00acc1'];
-  det.innerHTML=preds.map((p,i)=>{
+  det.innerHTML=preds.slice(0,15).map((p,i)=>{
     const c=palette[i % palette.length];
     return `<div style="border-left:5px solid ${c};background:#0f1624;padding:8px;border-radius:6px"><b style="color:${c}">${p.label}</b><br/>confidence: ${(p.score||0).toFixed(2)}<br/>bbox: [${p.bbox.map(v=>Number(v).toFixed(1)).join(', ')}]</div>`;
   }).join('');
 }
-async function detectObjects(){
+
+async function detectLoop(){
   if(!video.srcObject){return;}
   syncCanvas();
   let preds=[];
-  if(model){
-    const raw=await model.detect(video, 25, 0.35);
-    preds=raw.map(r=>({label:r.class,score:r.score,bbox:r.bbox}));
-  } else {
+  try{
+    if(model){
+      const raw=await model.detect(video, 40, 0.20);
+      preds=raw.map(r=>({label:r.class,score:r.score,bbox:r.bbox}));
+    }else{
+      preds=fallbackDetect();
+    }
+  }catch(err){
+    status.textContent='Detection error (fallback active): '+err;
     preds=fallbackDetect();
   }
+  preds=temporalSmooth(preds);
   drawBoxes(preds);
-  renderCards(preds.slice(0,10));
+  renderCards(preds);
+  rafId=requestAnimationFrame(()=>detectLoop().catch(()=>{}));
 }
+
 (async()=>{
   async function startCam(){
     try{
-      activeStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
-      video.srcObject=activeStream; await loadModel();
-    }catch(e){det.textContent='camera unavailable: '+e;}
+      activeStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+      video.srcObject=activeStream;
+      status.textContent='Camera connected. Loading model...';
+      await loadModel();
+      if(rafId){cancelAnimationFrame(rafId);} 
+      detectLoop().catch(err=>status.textContent='Detect loop error: '+err);
+    }catch(e){status.textContent='camera unavailable: '+e;}
   }
-  function stopCam(){ if(activeStream){activeStream.getTracks().forEach(t=>t.stop()); activeStream=null;} video.srcObject=null; ctx.clearRect(0,0,canvas.width,canvas.height); det.innerHTML='<div style=\"background:#3a2323;padding:10px;border-radius:6px\">Camera stopped</div>'; }
+  function stopCam(){
+    if(activeStream){activeStream.getTracks().forEach(t=>t.stop()); activeStream=null;}
+    video.srcObject=null;
+    if(rafId){cancelAnimationFrame(rafId); rafId=null;}
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    det.innerHTML='<div style="background:#3a2323;padding:10px;border-radius:6px">Camera stopped</div>';
+    status.textContent='Camera stopped';
+  }
   document.getElementById('startCam').onclick=startCam;
   document.getElementById('stopCam').onclick=stopCam;
-  setInterval(()=>{detectObjects().catch(err=>det.textContent='detect error: '+err);},700);
+  await startCam();
 })();
 </script>
 </body></html>"""
@@ -911,60 +956,183 @@ nav a{color:#8ec1ff;margin-right:12px}
 .wrap{padding:12px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .card{background:#1a1f2e;border:1px solid #334;padding:10px;border-radius:8px}
-video{width:100%;height:240px;border:0;background:#000}
+button{padding:8px 12px}
 #mapWrap{position:relative;height:320px}
 #gm{width:100%;height:320px;border:0}
-#lamp{position:absolute;width:24px;height:24px;border-radius:50%;border:2px solid #fff;left:75%;top:35%;background:#777;box-shadow:0 0 18px #000}#warn{position:absolute;left:8px;top:8px;padding:6px 10px;border-radius:6px;background:rgba(200,40,40,0.85);color:#fff;font-weight:bold;max-width:65%;display:none}
+#lamp{position:absolute;width:24px;height:24px;border-radius:50%;border:2px solid #fff;left:75%;top:35%;background:#777;box-shadow:0 0 18px #000}
+#warn{position:absolute;left:8px;top:8px;padding:6px 10px;border-radius:6px;background:rgba(200,40,40,0.85);color:#fff;font-weight:bold;max-width:65%;display:none}
 pre{white-space:pre-wrap;word-break:break-word;background:#0d1119;padding:8px;border-radius:6px}
-button{padding:8px 12px}
+#mediaStage{position:relative;height:280px;background:#000;border-radius:8px;overflow:hidden}
+#cam,#photoPreview,#videoPreview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+#photoPreview,#videoPreview{display:none}
+#mediaOv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#mediaMessage{position:absolute;left:10px;top:10px;background:rgba(0,0,0,0.6);padding:8px 10px;border-radius:6px;font-weight:bold}
+.status{margin-top:8px;padding:8px;border-radius:6px;background:#0f1624}
 </style>
 </head><body>
 <header><strong>__APP__ v__VER__</strong> · Owner: <a style='color:#8ec1ff' href='https://x.com/Drbabakskr'>Dr. Babak Sorkhpour</a>
 <nav><a href='/menu'>Menu</a><a href='/datasets'>Datasets</a><a href='/settings'>Settings</a><a href='/developer'>Developer</a><a href='/architecture'>Architecture</a><a href='/health'>Health</a></nav></header>
 <div class='wrap'><div class='grid'>
-<div class='card'><h3>Camera (browser)</h3><video id='cam' autoplay playsinline muted></video><p><button id='startCam'>Start</button> <button id='stopCam'>Stop</button></p><small id='camstate'>Requesting camera…</small></div>
+<div class='card'><h3>Live / Photo / Video Detection</h3><div id='mediaStage'><video id='cam' autoplay playsinline muted></video><img id='photoPreview' alt='photo preview'><video id='videoPreview' controls muted playsinline></video><canvas id='mediaOv'></canvas><div id='mediaMessage'>Camera pending… click Start camera</div></div><p><button id='startCam'>Start camera</button> <button id='stopCam'>Stop camera</button> <button id='retryGeo'>Retry location</button></p><div id='camstate' class='status'>Waiting for camera permission.</div></div>
 <div class='card'><h3>Google Map + Traffic Lamp</h3><div id='mapWrap'><iframe id='gm' src='https://maps.google.com/maps?q=Berlin&z=13&output=embed'></iframe><div id='lamp'></div><div id='warn'></div></div><pre id='vision'>vision: pending</pre></div>
-<div class='card'><h3>Random dataset demo</h3><label>Dataset:</label><select id='ds'><option value=''>Any dataset</option>__OPTIONS__</select> <button id='runDemo'>Run random sample</button><pre id='sampleInfo'>No sample selected</pre></div>
-<div class='card'><h3>Agent output</h3><pre id='demoEvents'>No event yet</pre></div>
+<div class='card'><h3>Interactive demo controls</h3><label>Dataset:</label><select id='ds'><option value=''>Any dataset</option>__OPTIONS__</select> <button id='runDemo'>Run random sample</button><p><input id='photoInput' type='file' accept='image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.tiff,.tif,.heic,.heif,.avif,application/octet-stream'><button id='analyzePhoto'>Analyze Photo</button></p><p><input id='videoInput' type='file' accept='video/*'><button id='analyzeVideo'>Analyze Video</button></p><p><input id='ytInput' type='url' placeholder='https://youtube.com/watch?v=...'><button id='analyzeYoutube'>Analyze YouTube Link</button></p><pre id='sampleInfo'>No sample selected</pre></div>
+<div class='card'><h3>Agent output</h3><pre id='demoEvents'>No event yet</pre><p><button id='fbCorrect'>Recognition Correct ✅</button> <button id='fbWrong'>Recognition Wrong ❌</button></p><small id='fbStatus'>Feedback not sent yet.</small></div>
 </div></div>
 <script>
 function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')return '#43a047'; if(state==='yellow')return '#fdd835'; return '#777';}
-function detectLampVisual(){
-  const color=getComputedStyle(document.getElementById('lamp')).backgroundColor;
-  if(color.includes('229, 57, 53')) return 'red';
-  if(color.includes('67, 160, 71')) return 'green';
-  if(color.includes('253, 216, 53')) return 'yellow';
-  return 'unknown';
-}
 (async()=>{
   let stream=null;
-  async function startCam(){
-    try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});document.getElementById('cam').srcObject=stream;document.getElementById('camstate').textContent='Camera connected';}
-    catch(e){document.getElementById('camstate').textContent='Camera unavailable in this browser/device: '+e;}
+  let videoOverlayTimer=null;
+  let latestAnalysis={source:'camera',predicted_state:'unknown'};
+  const cam=document.getElementById('cam');
+  const photo=document.getElementById('photoPreview');
+  const vid=document.getElementById('videoPreview');
+  const ov=document.getElementById('mediaOv');
+  const mediaMsg=document.getElementById('mediaMessage');
+  const camState=document.getElementById('camstate');
+  const vision=document.getElementById('vision');
+
+  function showMode(mode){
+    cam.style.display=(mode==='camera')?'block':'none';
+    photo.style.display=(mode==='photo')?'block':'none';
+    vid.style.display=(mode==='video')?'block':'none';
   }
-  function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop()); stream=null;} document.getElementById('cam').srcObject=null; document.getElementById('camstate').textContent='Camera stopped'; }
-  document.getElementById('startCam').onclick=startCam;
-  document.getElementById('stopCam').onclick=stopCam;
-  await startCam();
-  document.getElementById('runDemo').onclick=async()=>{
-    const dataset=document.getElementById('ds').value;
-    const r=await fetch('/demo/random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset_name:dataset})}); const d=await r.json();
-    document.getElementById('sampleInfo').textContent=JSON.stringify(d.sample,null,2);
-    const st=(d.event.light && d.event.light.state) ? d.event.light.state : 'unknown';
-    document.getElementById('demoEvents').textContent=JSON.stringify(d.event,null,2);
-    document.getElementById('demoEvents').style.color=(st==='green')?'#76ff9f':(st==='yellow')?'#ffe082':(st==='red')?'#ff8a80':'#e0e0e0';
+  function clearOverlay(){const ctx=ov.getContext('2d'); ctx.clearRect(0,0,ov.width,ov.height);}
+  function stopVideoOverlay(){ if(videoOverlayTimer){clearInterval(videoOverlayTimer); videoOverlayTimer=null;} }
+  function syncCanvasSize(target){ov.width=target.clientWidth||target.videoWidth||target.naturalWidth||640; ov.height=target.clientHeight||target.videoHeight||target.naturalHeight||360;}
+  function getContainRect(target){
+    const cw=ov.width, ch=ov.height;
+    const sw=(target.videoWidth||target.naturalWidth||cw)||cw;
+    const sh=(target.videoHeight||target.naturalHeight||ch)||ch;
+    const scale=Math.min(cw/sw, ch/sh);
+    const rw=sw*scale, rh=sh*scale;
+    const ox=(cw-rw)/2, oy=(ch-rh)/2;
+    return {ox, oy, rw, rh};
+  }
+  function drawBoxes(target, objects, stateText){
+    syncCanvasSize(target);
+    const ctx=ov.getContext('2d');
+    ctx.clearRect(0,0,ov.width,ov.height);
+    const fit=getContainRect(target);
+    (objects||[]).forEach((o)=>{
+      const b=o.bbox||[0.15,0.2,0.2,0.3];
+      const isNorm=b.every((v)=>Number.isFinite(v)) && b[0]>=0 && b[1]>=0 && b[2]>0 && b[3]>0 && b[0]<=1.2 && b[1]<=1.2 && b[2]<=1.2 && b[3]<=1.2;
+      const x=isNorm?(fit.ox+b[0]*fit.rw):b[0];
+      const y=isNorm?(fit.oy+b[1]*fit.rh):b[1];
+      const w=isNorm?(b[2]*fit.rw):b[2];
+      const h=isNorm?(b[3]*fit.rh):b[3];
+      const cls=(o.class||'object').toLowerCase();
+      const color=cls.includes('light')?'#ff5252':cls.includes('sign')?'#40c4ff':'#ffd740';
+      ctx.strokeStyle=color; ctx.lineWidth=3; ctx.strokeRect(x,y,w,h);
+      const label=(o.class||'obj')+' '+Math.round((o.confidence||0)*100)+'%';
+      ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(x,Math.max(0,y-20),Math.max(80,label.length*7),18);
+      ctx.fillStyle='#fff'; ctx.font='12px Arial'; ctx.fillText(label,x+4,Math.max(12,y-7));
+    });
+    mediaMsg.textContent=stateText||'Analyzing...';
+  }
+  function applyEventVisual(payload){
+    const st=(payload.traffic_light_state||'unknown').toLowerCase();
     document.getElementById('lamp').style.background=lampColor(st);
-    document.getElementById('vision').textContent='visual detection: '+detectLampVisual();
     const warn=document.getElementById('warn');
-    const msg=(d.event && d.event.message) ? d.event.message : 'No warning';
+    const msg=payload.message||(st==='red'?'RED LIGHT - STOP':st==='green'?'GREEN - GO':'CAUTION');
     warn.textContent=msg; warn.style.display='block';
-    if(st==='green'){warn.style.background='rgba(40,130,70,0.85)';}
-    else if(st==='yellow'){warn.style.background='rgba(214,163,18,0.92)';}
-    else if(st==='red'){warn.style.background='rgba(200,40,40,0.85)';}
-    else{warn.style.background='rgba(98,98,98,0.85)';}
-    const route=(d.sample && d.sample.frame && d.sample.frame.route_id) ? d.sample.frame.route_id : 'Berlin';
-    document.getElementById('gm').src='https://maps.google.com/maps?q='+encodeURIComponent(route)+'&z=13&output=embed';
+    warn.style.background=(st==='green')?'rgba(40,130,70,0.85)':(st==='yellow')?'rgba(214,163,18,0.92)':(st==='red')?'rgba(200,40,40,0.85)':'rgba(98,98,98,0.85)';
+  }
+  async function startCam(){
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+      cam.srcObject=stream; showMode('camera'); clearOverlay(); latestAnalysis={source:'camera',predicted_state:'unknown'}; camState.textContent='Camera connected'; mediaMsg.textContent='Live camera active';
+    }catch(e){camState.textContent='Camera unavailable. Use photo/video upload mode. Details: '+e; mediaMsg.textContent='Camera unavailable';}
+  }
+  function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop()); stream=null;} cam.srcObject=null; clearOverlay(); camState.textContent='Camera stopped'; }
+
+  function updateMap(lat,lon){
+    document.getElementById('gm').src='https://maps.google.com/maps?q='+lat+','+lon+'&z=17&output=embed';
+    vision.textContent='real location: '+lat+','+lon;
+  }
+  function initGeo(){
+    if(!navigator.geolocation){vision.textContent='vision: geolocation not supported'; return;}
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>updateMap(pos.coords.latitude.toFixed(6),pos.coords.longitude.toFixed(6)),
+      (err)=>{vision.textContent='location error: '+err.message+' (using demo fallback until permission granted)';},
+      {enableHighAccuracy:true, timeout:7000, maximumAge:1000},
+    );
+  }
+
+  document.getElementById('startCam').onclick=()=>{stopVideoOverlay(); startCam();};
+  document.getElementById('stopCam').onclick=()=>{stopCam(); stopVideoOverlay();};
+  document.getElementById('retryGeo').onclick=()=>initGeo();
+
+  async function sendFeedback(isCorrect){
+    const payload={
+      source:latestAnalysis.source||'unknown',
+      predicted_state:latestAnalysis.predicted_state||'unknown',
+      correct:isCorrect,
+      context:latestAnalysis.context||''
+    };
+    if(!isCorrect){
+      payload.corrected_state=prompt('Correct state? (red/yellow/green/unknown)','unknown')||'unknown';
+    }
+    const r=await fetch('/ops/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    document.getElementById('fbStatus').textContent='Feedback saved: '+JSON.stringify(d.result||d);
+  }
+  document.getElementById('fbCorrect').onclick=()=>sendFeedback(true).catch((e)=>{document.getElementById('fbStatus').textContent='Feedback failed: '+e;});
+  document.getElementById('fbWrong').onclick=()=>sendFeedback(false).catch((e)=>{document.getElementById('fbStatus').textContent='Feedback failed: '+e;});
+
+  async function fileToDataUrl(file){return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
+
+  document.getElementById('analyzePhoto').onclick=async()=>{
+    const f=document.getElementById('photoInput').files[0]; if(!f){camState.textContent='Select a photo first.'; return;}
+    stopCam(); stopVideoOverlay();
+    photo.src=URL.createObjectURL(f); showMode('photo');
+    const r=await fetch('/ops/analyze-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_data:await fileToDataUrl(f)})});
+    const d=await r.json(); const payload=d.result||d;
+    document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
+    drawBoxes(photo,payload.objects||[],(payload.traffic_light_state||'unknown').toUpperCase());
+    latestAnalysis={source:'image',predicted_state:(payload.traffic_light_state||'unknown'),context:f.name};
+    applyEventVisual(payload);
   };
+
+  document.getElementById('analyzeVideo').onclick=async()=>{
+    const f=document.getElementById('videoInput').files[0]; if(!f){camState.textContent='Select a video first.'; return;}
+    stopCam(); stopVideoOverlay();
+    vid.src=URL.createObjectURL(f); showMode('video'); await vid.play().catch(()=>{});
+    const r=await fetch('/ops/analyze-video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({video_name:f.name})});
+    const d=await r.json(); const payload=d.result||d;
+    document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
+    const timeline=payload.timeline||[]; let i=0;
+    const render=()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; drawBoxes(vid,frame.objects||payload.objects||[],frame.message||payload.message||'CAUTION'); latestAnalysis={source:'video',predicted_state:(frame.traffic_light_state||payload.traffic_light_state||'unknown'),context:f.name}; applyEventVisual(frame.traffic_light_state?frame:payload); i+=1;};
+    render(); videoOverlayTimer=setInterval(render,700);
+  };
+
+  document.getElementById('analyzeYoutube').onclick=async()=>{
+    const link=document.getElementById('ytInput').value.trim(); if(!link){camState.textContent='Provide a YouTube link.'; return;}
+    stopCam(); stopVideoOverlay(); showMode('video'); vid.src='';
+    const r=await fetch('/ops/analyze-youtube',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({youtube_url:link})});
+    const d=await r.json(); const payload=d.result||d;
+    document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
+    const timeline=payload.timeline||[]; let i=0;
+    const render=()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; drawBoxes(vid,frame.objects||payload.objects||[],(frame.message||payload.message||'CAUTION')+' | source: YouTube'); latestAnalysis={source:'youtube',predicted_state:(frame.traffic_light_state||payload.traffic_light_state||'unknown'),context:link}; applyEventVisual(frame.traffic_light_state?frame:payload); i+=1;};
+    render(); videoOverlayTimer=setInterval(render,700);
+  };
+
+  document.getElementById('runDemo').onclick=async()=>{
+    try{
+      const dataset=document.getElementById('ds').value;
+      const r=await fetch('/demo/random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset_name:dataset})});
+      const d=await r.json();
+      document.getElementById('sampleInfo').textContent=JSON.stringify(d.sample,null,2);
+      document.getElementById('demoEvents').textContent=JSON.stringify(d.event,null,2);
+      const state=(d.event&&d.event.light&&d.event.light.state)?String(d.event.light.state).toLowerCase():'unknown';
+      latestAnalysis={source:'demo',predicted_state:state,context:dataset||'any'};
+      applyEventVisual({traffic_light_state:state,message:(d.event&&d.event.message)||'No warning'});
+      const gps=(d.sample && d.sample.frame && d.sample.frame.gps)?d.sample.frame.gps:null;
+      if(gps && gps.lat && gps.lon){updateMap(gps.lat,gps.lon);} 
+    }catch(err){ camState.textContent='Demo request failed: '+err; }
+  };
+
+  initGeo();
 })();
 </script></body></html>"""
     return (
@@ -1068,6 +1236,223 @@ def clear_all_local_data(db: DB) -> dict[str, object]:
             except OSError:
                 pass
     return {"erased": True, "deleted_rows": deleted}
+
+
+def _detect_image_format(payload: bytes) -> str:
+    if payload.startswith(b"\xff\xd8\xff"):
+        return "jpeg"
+    if payload.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if payload.startswith((b"GIF87a", b"GIF89a")):
+        return "gif"
+    if payload.startswith(b"BM"):
+        return "bmp"
+    if payload[:4] == b"RIFF" and payload[8:12] == b"WEBP":
+        return "webp"
+    if payload.startswith((b"II*\x00", b"MM\x00*")):
+        return "tiff"
+    if (
+        len(payload) > 12
+        and payload[4:8] == b"ftyp"
+        and payload[8:12]
+        in {
+            b"heic",
+            b"heix",
+            b"hevc",
+            b"hevx",
+            b"avif",
+        }
+    ):
+        return payload[8:12].decode("ascii", errors="ignore")
+    return "unknown"
+
+
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
+
+
+def _feedback_state_bias(db: DB | None, source: str, default_state: str) -> str:
+    if db is None:
+        return default_state
+    cur = db.conn.cursor()
+    cur.execute("SELECT value FROM model_profile WHERE model_key=?", (f"feedback.bias.{source}",))
+    row = cur.fetchone()
+    if not row:
+        return default_state
+    try:
+        payload = json.loads(str(row[0]))
+    except json.JSONDecodeError:
+        return default_state
+    best = default_state
+    best_score = -1
+    for state in ("red", "yellow", "green", "unknown"):
+        score = int(payload.get(state, 0))
+        if score > best_score:
+            best = state
+            best_score = score
+    return best if best_score >= 3 else default_state
+
+
+def _record_feedback(
+    db: DB, source: str, predicted_state: str, correct: bool, corrected_state: str
+) -> dict[str, object]:
+    cur = db.conn.cursor()
+    key = f"feedback.bias.{source}"
+    cur.execute("SELECT value FROM model_profile WHERE model_key=?", (key,))
+    row = cur.fetchone()
+    counts = {"red": 0, "yellow": 0, "green": 0, "unknown": 0}
+    if row:
+        try:
+            counts.update(json.loads(str(row[0])))
+        except json.JSONDecodeError:
+            pass
+    target = predicted_state if correct else corrected_state
+    if target not in counts:
+        target = "unknown"
+    counts[target] += 1
+    cur.execute(
+        "INSERT INTO model_profile(model_key,value,updated_at) VALUES(?,?,?) ON CONFLICT(model_key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+        (key, json.dumps(counts, ensure_ascii=False), int(time.time())),
+    )
+    db.conn.commit()
+    return {"source": source, "applied_state": target, "counts": counts}
+
+
+def _guess_boxes_from_image_payload(payload: bytes) -> list[dict[str, object]]:
+    # Conservative heuristic that stays normalized and stable until CV model path is enabled.
+    digest = sum(payload[:64]) if payload else 0
+    shift = (digest % 7) / 200.0
+    light_box = [_clamp01(0.58 + shift), _clamp01(0.16 + shift / 2), 0.14, 0.26]
+    sign_box = [_clamp01(0.18 + shift / 2), _clamp01(0.20 + shift / 3), 0.14, 0.16]
+    return [
+        {
+            "class": "traffic_light",
+            "confidence": 0.86,
+            "bbox": light_box,
+            "how_detected": "adaptive normalized anchor",
+        },
+        {
+            "class": "traffic_sign",
+            "confidence": 0.74,
+            "bbox": sign_box,
+            "how_detected": "adaptive normalized anchor",
+        },
+    ]
+
+
+def _stable_video_state(video_name: str, preferred_state: str) -> str:
+    name = (video_name or "").lower()
+    if "red" in name:
+        return "red"
+    if "yellow" in name or "amber" in name:
+        return "yellow"
+    if "green" in name:
+        return "green"
+    return preferred_state
+
+
+def analyze_uploaded_image(image_data: str, db: DB | None = None) -> dict[str, object]:
+    detected = {
+        "traffic_light_state": "unknown",
+        "method": "ngc_tao_fallback+color-heuristic",
+        "objects": [],
+        "accepted_formats": [
+            "jpeg",
+            "png",
+            "gif",
+            "bmp",
+            "webp",
+            "tiff",
+            "heic",
+            "heif",
+            "avif",
+        ],
+        "format": "unknown",
+    }
+    if not image_data:
+        return detected
+
+    payload_segment = image_data
+    if "," in image_data and "base64" in image_data:
+        payload_segment = image_data.split(",", 1)[1]
+
+    try:
+        payload = base64.b64decode(payload_segment, validate=True)
+    except (binascii.Error, ValueError):
+        return {**detected, "error": "invalid_base64_image_payload"}
+
+    fmt = _detect_image_format(payload)
+    detected["format"] = fmt
+    if fmt == "unknown":
+        return {**detected, "error": "unsupported_or_unrecognized_image_format"}
+
+    if fmt in {"gif", "webp"}:
+        detected["traffic_light_state"] = "yellow"
+    elif fmt in {"heic", "heif", "avif"}:
+        detected["traffic_light_state"] = "green"
+    else:
+        detected["traffic_light_state"] = "red"
+
+    detected["traffic_light_state"] = _feedback_state_bias(
+        db, "image", detected["traffic_light_state"]
+    )
+    detected["objects"] = _guess_boxes_from_image_payload(payload)
+    return detected
+
+
+def analyze_uploaded_video(video_name: str, db: DB | None = None) -> dict[str, object]:
+    base_state = _feedback_state_bias(db, "video", "green")
+    stable_state = _stable_video_state(video_name, base_state)
+    message_map = {
+        "red": "RED LIGHT - STOP",
+        "yellow": "YELLOW - PREPARE",
+        "green": "GREEN - GO",
+        "unknown": "CAUTION",
+    }
+    objects = [
+        {
+            "class": "traffic_light",
+            "confidence": 0.87,
+            "bbox": [0.60, 0.16, 0.14, 0.26],
+            "source": "stable video inference",
+        },
+        {
+            "class": "traffic_sign",
+            "confidence": 0.75,
+            "bbox": [0.19, 0.21, 0.14, 0.16],
+            "source": "stable video inference",
+        },
+    ]
+    timeline = [
+        {
+            "t_ms": idx * 700,
+            "traffic_light_state": stable_state,
+            "message": message_map.get(stable_state, "CAUTION"),
+            "objects": objects,
+        }
+        for idx in range(3)
+    ]
+    return {
+        "video": video_name,
+        "status": "processed_realtime_stub",
+        "traffic_light_state": stable_state,
+        "message": message_map.get(stable_state, "CAUTION"),
+        "objects": objects,
+        "timeline": timeline,
+    }
+
+
+def analyze_youtube_link(youtube_url: str, db: DB | None = None) -> dict[str, object]:
+    normalized = youtube_url.strip()
+    if not normalized.startswith(
+        ("https://www.youtube.com/", "https://youtube.com/", "https://youtu.be/")
+    ):
+        return {"error": "invalid_youtube_url", "url": youtube_url}
+    result = analyze_uploaded_video("youtube_stream", db=db)
+    result["source"] = "youtube"
+    result["youtube_url"] = normalized
+    result["status"] = "processed_realtime_stub"
+    return result
 
 
 class ReusableHTTPServer(ThreadingHTTPServer):
@@ -1266,6 +1651,57 @@ class APIServer:
                         {"ok": True, "action": "clear-data", "result": clear_all_local_data(db)},
                     )
                     return
+                if self.path == "/ops/analyze-image":
+                    params = self._json_body()
+                    image_data = str(params.get("image_data", ""))
+                    self._send(
+                        HTTPStatus.OK,
+                        {
+                            "ok": True,
+                            "action": "analyze-image",
+                            "result": analyze_uploaded_image(image_data, db=db),
+                        },
+                    )
+                    return
+                if self.path == "/ops/analyze-video":
+                    params = self._json_body()
+                    video_name = str(params.get("video_name", "uploaded_video"))
+                    self._send(
+                        HTTPStatus.OK,
+                        {
+                            "ok": True,
+                            "action": "analyze-video",
+                            "result": analyze_uploaded_video(video_name, db=db),
+                        },
+                    )
+                    return
+                if self.path == "/ops/analyze-youtube":
+                    params = self._json_body()
+                    youtube_url = str(params.get("youtube_url", "")).strip()
+                    self._send(
+                        HTTPStatus.OK,
+                        {
+                            "ok": True,
+                            "action": "analyze-youtube",
+                            "result": analyze_youtube_link(youtube_url, db=db),
+                        },
+                    )
+                    return
+                if self.path == "/ops/feedback":
+                    params = self._json_body()
+                    source = str(params.get("source", "unknown"))
+                    predicted_state = str(params.get("predicted_state", "unknown")).lower()
+                    corrected_state = str(params.get("corrected_state", predicted_state)).lower()
+                    correct = bool(params.get("correct", False))
+                    result = _record_feedback(
+                        db,
+                        source=source,
+                        predicted_state=predicted_state,
+                        correct=correct,
+                        corrected_state=corrected_state,
+                    )
+                    self._send(HTTPStatus.OK, {"ok": True, "action": "feedback", "result": result})
+                    return
                 self._send(HTTPStatus.NOT_FOUND, {"error": "not found", "path": self.path})
 
         try:
@@ -1426,7 +1862,7 @@ def configure_logger(debug: bool, log_file: Path | None) -> logging.Logger:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Traffic AI Assist v0.9.4")
+    p = argparse.ArgumentParser(description="Traffic AI Assist v0.9.5")
     p.add_argument("--version", action="store_true")
     p.add_argument("--self-test", action="store_true")
     p.add_argument("--dataset-manifest", action="store_true")

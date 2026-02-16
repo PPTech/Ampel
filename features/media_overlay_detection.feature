@@ -1,4 +1,4 @@
-# Version: 0.9.13
+# Version: 0.9.17
 # License: MIT
 # Code generated with support from CODEX and CODEX CLI.
 # Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -20,3 +20,9 @@ Feature: Photo and video overlay detections in dashboard
     Then the video is shown in the media stage
     And timeline detection boxes are drawn over playback
     And each frame message is displayed over video
+
+
+  Scenario: User feedback improves future predictions
+    Given a user reviewed a detection result
+    When the user marks prediction as wrong and submits corrected state
+    Then the app stores feedback bias for future image/video inference

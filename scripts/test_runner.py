@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Version: 0.9.4
+Version: 0.9.5
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -16,18 +16,16 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 FEATURES_DIR = REPO_ROOT / "features"
 
-from ai_engine.inference.edge_detection import SensorSnapshot, LightDetection, LaneContextFilter
+from ai_engine.inference.edge_detection import LaneContextFilter, LightDetection, SensorSnapshot
 
 
-def run_bdd_features() -> Dict[str, object]:
+def run_bdd_features() -> dict[str, object]:
     feature_files = sorted(str(p) for p in FEATURES_DIR.glob("*.feature"))
     if not feature_files:
         return {"executed": False, "reason": "no feature files"}
@@ -42,10 +40,14 @@ def run_bdd_features() -> Dict[str, object]:
     }
 
 
-def run_inference_benchmark(iterations: int = 300) -> Dict[str, object]:
+def run_inference_benchmark(iterations: int = 300) -> dict[str, object]:
     detections = [
-        LightDetection("L1", lane_hint=0, heading_deg=90.0, confidence=0.93, bbox_xyxy=(0, 0, 10, 20)),
-        LightDetection("L2", lane_hint=2, heading_deg=150.0, confidence=0.41, bbox_xyxy=(2, 1, 11, 19)),
+        LightDetection(
+            "L1", lane_hint=0, heading_deg=90.0, confidence=0.93, bbox_xyxy=(0, 0, 10, 20)
+        ),
+        LightDetection(
+            "L2", lane_hint=2, heading_deg=150.0, confidence=0.41, bbox_xyxy=(2, 1, 11, 19)
+        ),
     ]
     imu = SensorSnapshot(gyro_yaw_rate=0.2, accel_x=0.1, accel_y=0.0, accel_z=9.8)
 
@@ -57,7 +59,7 @@ def run_inference_benchmark(iterations: int = 300) -> Dict[str, object]:
     return {"iterations": iterations, "avg_ms": round(avg_ms, 4), "pass_lt_50ms": avg_ms < 50.0}
 
 
-def run_privacy_audit() -> Dict[str, object]:
+def run_privacy_audit() -> dict[str, object]:
     risky_patterns = [
         r"print\(.*gps",
         r"logger\..*gps",
@@ -70,7 +72,7 @@ def run_privacy_audit() -> Dict[str, object]:
         r"print\(.*uiimage",
         r"print\(.*bitmap",
     ]
-    hits: List[Dict[str, object]] = []
+    hits: list[dict[str, object]] = []
     for py_file in REPO_ROOT.rglob("*.py"):
         if "/.venv/" in str(py_file):
             continue
@@ -78,7 +80,13 @@ def run_privacy_audit() -> Dict[str, object]:
         for idx, line in enumerate(text.splitlines(), start=1):
             for pat in risky_patterns:
                 if re.search(pat, line, flags=re.IGNORECASE):
-                    hits.append({"file": str(py_file.relative_to(REPO_ROOT)), "line": idx, "text": line.strip()[:200]})
+                    hits.append(
+                        {
+                            "file": str(py_file.relative_to(REPO_ROOT)),
+                            "line": idx,
+                            "text": line.strip()[:200],
+                        }
+                    )
     return {"hits": hits, "pass": len(hits) == 0}
 
 
@@ -87,7 +95,7 @@ def main() -> int:
     parser.add_argument("--skip-bdd", action="store_true")
     args = parser.parse_args()
 
-    result: Dict[str, object] = {}
+    result: dict[str, object] = {}
     if not args.skip_bdd:
         result["bdd"] = run_bdd_features()
     result["benchmark"] = run_inference_benchmark()
