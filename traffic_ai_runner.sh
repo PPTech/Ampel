@@ -38,7 +38,7 @@ Usage:
   ./traffic_ai_runner.sh triton [jsonl]
   ./traffic_ai_runner.sh abtest
   ./traffic_ai_runner.sh security
-  ./traffic_ai_runner.sh syncmain
+  ./traffic_ai_runner.sh syncmain [service]
   ./traffic_ai_runner.sh datasync
   ./traffic_ai_runner.sh compilemanifest
 USAGE
@@ -71,7 +71,8 @@ case "$cmd" in
     python3 "$APP" --security-check
     ;;
   syncmain)
-    ./scripts/sync_latest_to_main.sh origin main
+    service="${2:-ampel.service}"
+    ./scripts/sync_latest_to_main.sh origin main "$service"
     ;;
   datasync)
     python3 scripts/dataset_manager.py --sync
