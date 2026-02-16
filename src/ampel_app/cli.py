@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Traffic AI Assist - Real Agent Core
-Version: 0.9.16
+Version: 0.9.5
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -34,7 +34,7 @@ from ampel_app.server.http_api import health_extensions
 from ampel_app.storage.db import retention_cleanup
 
 APP_NAME = "traffic-ai-assist"
-SEMVER = "0.9.16"
+SEMVER = "0.9.12"
 APP_START_TS = int(time.time())
 
 GEO_COORD_PATTERN = re.compile(r"(?<!\d)([-+]?\d{1,3}\.\d{4,})\s*,\s*([-+]?\d{1,3}\.\d{4,})(?!\d)")
@@ -824,15 +824,14 @@ def datasets_html() -> str:
 
 def developer_html() -> str:
     html = """<!doctype html><html><head><meta charset='utf-8'><title>__APP__ developer v__VER__</title>
-<style>body{font-family:Arial;background:#0b0f17;color:#eee;margin:0;padding:12px}#wrap{position:relative;max-width:1080px}video{width:100%;background:#000;border:1px solid #333;border-radius:8px}canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}pre{background:#0f1624;padding:8px}.hint{color:#9fb7ff}a.btn{display:inline-block;padding:8px 12px;background:#26324d;color:#9cc3ff;text-decoration:none;border-radius:6px;margin-bottom:8px}.status{margin:8px 0;padding:8px;border-radius:6px;background:#1a2439}</style>
+<style>body{font-family:Arial;background:#111;color:#eee;margin:0;padding:12px}#wrap{position:relative;max-width:960px}video{width:100%;background:#000;border:1px solid #333}canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}pre{background:#0f1624;padding:8px}.hint{color:#9fb7ff}a.btn{display:inline-block;padding:8px 12px;background:#26324d;color:#9cc3ff;text-decoration:none;border-radius:6px;margin-bottom:8px}</style>
 <script src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd'></script>
 </head><body>
 <a class='btn' href='/menu'>← Back to Menu</a>
 <h2>Developer Mode v__VER__</h2>
 <p>License: MIT — Code generated with support from CODEX and CODEX CLI — Owner: Dr. Babak Sorkhpour</p>
-<p class='hint'>Enhanced detection path: COCO-SSD (higher candidate count) + temporal vote smoothing + HSV light/sign fallback for improved low-light reliability.</p>
-<div class='status' id='devStatus'>Initializing developer mode…</div>
+<p class='hint'>Core free model: COCO-SSD (browser). Bounding boxes + label confidence shown over camera. Method: TFJS model -> bbox -> confidence ranking.</p>
 <div id='wrap'><video id='cam' autoplay playsinline muted></video><canvas id='ov'></canvas></div>
 <p><button id='startCam'>Start camera</button> <button id='stopCam'>Stop camera</button></p>
 <div id='det' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px'><div style='background:#0f1624;padding:10px;border-radius:6px'>Waiting for camera…</div></div>
@@ -841,99 +840,61 @@ const video=document.getElementById('cam');
 const canvas=document.getElementById('ov');
 const ctx=canvas.getContext('2d');
 const det=document.getElementById('det');
-const status=document.getElementById('devStatus');
-let activeStream=null; let model=null; let rafId=null;
-const labelHistory=[];
+let activeStream=null; let model=null;
 
 function syncCanvas(){ canvas.width=video.videoWidth||960; canvas.height=video.videoHeight||540; }
 async function loadModel(){
-  try{ model = await cocoSsd.load({base:'mobilenet_v2'}); status.textContent='Model loaded: COCO-SSD (mobilenet_v2)'; }
-  catch(e){ status.textContent='Model unavailable, fallback HSV mode active.'; model = null; }
+  try{ model = await cocoSsd.load(); det.innerHTML='<div style="background:#17323a;padding:10px;border-radius:6px">Model loaded: COCO-SSD</div>'; }
+  catch(e){ det.innerHTML='<div style="background:#4a2f16;padding:10px;border-radius:6px">Model unavailable, fallback mode.</div>'; model = null; }
 }
-
 function fallbackDetect(){
-  const w=canvas.width||960; const h=canvas.height||540;
-  return [
-    {label:'traffic_light_guess',score:0.22,bbox:[w*0.60,h*0.18,w*0.12,h*0.22]},
-    {label:'traffic_sign_guess',score:0.19,bbox:[w*0.24,h*0.22,w*0.10,h*0.13]},
-  ];
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#fdd835'; ctx.fillRect(20,20,8,8);
+  return [{label:'fallback_scene',score:0.1,bbox:[20,20,50,30]}];
 }
-
-function temporalSmooth(preds){
-  labelHistory.push(preds.map(p=>p.label));
-  if(labelHistory.length>6){labelHistory.shift();}
-  const counts={};
-  labelHistory.flat().forEach(l=>counts[l]=(counts[l]||0)+1);
-  const keep = new Set(Object.entries(counts).filter(([,c])=>c>=2).map(([l])=>l));
-  return preds.filter(p=>keep.has(p.label));
-}
-
 function drawBoxes(preds){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.lineWidth=2; ctx.font='14px Arial';
   preds.forEach(p=>{
     const [x,y,w,h]=p.bbox;
-    const label=(p.label||'object').toLowerCase();
-    const color=label.includes('light')?'#ff6b6b':label.includes('sign')?'#40c4ff':'#80ff72';
-    ctx.strokeStyle=color; ctx.strokeRect(x,y,w,h);
-    const txt=`${p.label} ${(p.score||0).toFixed(2)}`;
-    ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(x,Math.max(0,y-18),Math.max(90,txt.length*8),18);
-    ctx.fillStyle='#fff'; ctx.fillText(txt,x+4,Math.max(12,y-5));
+    ctx.strokeStyle='#3ddc97'; ctx.strokeRect(x,y,w,h);
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(x,y-18,Math.max(90,p.label.length*8),18);
+    ctx.fillStyle='#fff'; ctx.fillText(`${p.label} ${(p.score||0).toFixed(2)}`, x+4, y-5);
   });
 }
 
 function renderCards(preds){
-  if(!preds.length){ det.innerHTML='<div style="background:#222;padding:10px;border-radius:6px">No persistent objects detected</div>'; return; }
+  if(!preds.length){ det.innerHTML='<div style="background:#222;padding:10px;border-radius:6px">No objects detected</div>'; return; }
   const palette=['#1e88e5','#43a047','#fdd835','#e53935','#8e24aa','#00acc1'];
-  det.innerHTML=preds.slice(0,15).map((p,i)=>{
+  det.innerHTML=preds.map((p,i)=>{
     const c=palette[i % palette.length];
     return `<div style="border-left:5px solid ${c};background:#0f1624;padding:8px;border-radius:6px"><b style="color:${c}">${p.label}</b><br/>confidence: ${(p.score||0).toFixed(2)}<br/>bbox: [${p.bbox.map(v=>Number(v).toFixed(1)).join(', ')}]</div>`;
   }).join('');
 }
-
-async function detectLoop(){
+async function detectObjects(){
   if(!video.srcObject){return;}
   syncCanvas();
   let preds=[];
-  try{
-    if(model){
-      const raw=await model.detect(video, 40, 0.20);
-      preds=raw.map(r=>({label:r.class,score:r.score,bbox:r.bbox}));
-    }else{
-      preds=fallbackDetect();
-    }
-  }catch(err){
-    status.textContent='Detection error (fallback active): '+err;
+  if(model){
+    const raw=await model.detect(video, 25, 0.35);
+    preds=raw.map(r=>({label:r.class,score:r.score,bbox:r.bbox}));
+  } else {
     preds=fallbackDetect();
   }
-  preds=temporalSmooth(preds);
   drawBoxes(preds);
-  renderCards(preds);
-  rafId=requestAnimationFrame(()=>detectLoop().catch(()=>{}));
+  renderCards(preds.slice(0,10));
 }
-
 (async()=>{
   async function startCam(){
     try{
-      activeStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
-      video.srcObject=activeStream;
-      status.textContent='Camera connected. Loading model...';
-      await loadModel();
-      if(rafId){cancelAnimationFrame(rafId);} 
-      detectLoop().catch(err=>status.textContent='Detect loop error: '+err);
-    }catch(e){status.textContent='camera unavailable: '+e;}
+      activeStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+      video.srcObject=activeStream; await loadModel();
+    }catch(e){det.textContent='camera unavailable: '+e;}
   }
-  function stopCam(){
-    if(activeStream){activeStream.getTracks().forEach(t=>t.stop()); activeStream=null;}
-    video.srcObject=null;
-    if(rafId){cancelAnimationFrame(rafId); rafId=null;}
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    det.innerHTML='<div style="background:#3a2323;padding:10px;border-radius:6px">Camera stopped</div>';
-    status.textContent='Camera stopped';
-  }
+  function stopCam(){ if(activeStream){activeStream.getTracks().forEach(t=>t.stop()); activeStream=null;} video.srcObject=null; ctx.clearRect(0,0,canvas.width,canvas.height); det.innerHTML='<div style=\"background:#3a2323;padding:10px;border-radius:6px\">Camera stopped</div>'; }
   document.getElementById('startCam').onclick=startCam;
   document.getElementById('stopCam').onclick=stopCam;
-  await startCam();
+  setInterval(()=>{detectObjects().catch(err=>det.textContent='detect error: '+err);},700);
 })();
 </script>
 </body></html>"""
@@ -956,151 +917,76 @@ nav a{color:#8ec1ff;margin-right:12px}
 .wrap{padding:12px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .card{background:#1a1f2e;border:1px solid #334;padding:10px;border-radius:8px}
-button{padding:8px 12px}
+video{width:100%;height:240px;border:0;background:#000}
 #mapWrap{position:relative;height:320px}
 #gm{width:100%;height:320px;border:0}
-#lamp{position:absolute;width:24px;height:24px;border-radius:50%;border:2px solid #fff;left:75%;top:35%;background:#777;box-shadow:0 0 18px #000}
-#warn{position:absolute;left:8px;top:8px;padding:6px 10px;border-radius:6px;background:rgba(200,40,40,0.85);color:#fff;font-weight:bold;max-width:65%;display:none}
+#lamp{position:absolute;width:24px;height:24px;border-radius:50%;border:2px solid #fff;left:75%;top:35%;background:#777;box-shadow:0 0 18px #000}#warn{position:absolute;left:8px;top:8px;padding:6px 10px;border-radius:6px;background:rgba(200,40,40,0.85);color:#fff;font-weight:bold;max-width:65%;display:none}
 pre{white-space:pre-wrap;word-break:break-word;background:#0d1119;padding:8px;border-radius:6px}
-#mediaStage{position:relative;height:280px;background:#000;border-radius:8px;overflow:hidden}
-#cam,#photoPreview,#videoPreview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
-#photoPreview,#videoPreview{display:none}
-#mediaOv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#mediaMessage{position:absolute;left:10px;top:10px;background:rgba(0,0,0,0.6);padding:8px 10px;border-radius:6px;font-weight:bold}
-.status{margin-top:8px;padding:8px;border-radius:6px;background:#0f1624}
+button{padding:8px 12px}
 </style>
 </head><body>
 <header><strong>__APP__ v__VER__</strong> · Owner: <a style='color:#8ec1ff' href='https://x.com/Drbabakskr'>Dr. Babak Sorkhpour</a>
 <nav><a href='/menu'>Menu</a><a href='/datasets'>Datasets</a><a href='/settings'>Settings</a><a href='/developer'>Developer</a><a href='/architecture'>Architecture</a><a href='/health'>Health</a></nav></header>
 <div class='wrap'><div class='grid'>
-<div class='card'><h3>Live / Photo / Video Detection</h3><div id='mediaStage'><video id='cam' autoplay playsinline muted></video><img id='photoPreview' alt='photo preview'><video id='videoPreview' controls muted playsinline></video><canvas id='mediaOv'></canvas><div id='mediaMessage'>Camera pending… click Start camera</div></div><p><button id='startCam'>Start camera</button> <button id='stopCam'>Stop camera</button> <button id='retryGeo'>Retry location</button></p><div id='camstate' class='status'>Waiting for camera permission.</div></div>
+<div class='card'><h3>Camera (browser)</h3><video id='cam' autoplay playsinline muted></video><p><button id='startCam'>Start</button> <button id='stopCam'>Stop</button></p><small id='camstate'>Requesting camera…</small></div>
 <div class='card'><h3>Google Map + Traffic Lamp</h3><div id='mapWrap'><iframe id='gm' src='https://maps.google.com/maps?q=Berlin&z=13&output=embed'></iframe><div id='lamp'></div><div id='warn'></div></div><pre id='vision'>vision: pending</pre></div>
-<div class='card'><h3>Interactive demo controls</h3><label>Dataset:</label><select id='ds'><option value=''>Any dataset</option>__OPTIONS__</select> <button id='runDemo'>Run random sample</button><p><input id='photoInput' type='file' accept='image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.tiff,.tif,.heic,.heif,.avif,application/octet-stream'><button id='analyzePhoto'>Analyze Photo</button></p><p><input id='videoInput' type='file' accept='video/*'><button id='analyzeVideo'>Analyze Video</button></p><p><input id='ytInput' type='url' placeholder='https://youtube.com/watch?v=...'><button id='analyzeYoutube'>Analyze YouTube Link</button></p><pre id='sampleInfo'>No sample selected</pre></div>
+<div class='card'><h3>Random dataset demo</h3><label>Dataset:</label><select id='ds'><option value=''>Any dataset</option>__OPTIONS__</select> <button id='runDemo'>Run random sample</button><p><input id='photoInput' type='file' accept='image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.tiff,.tif,.heic,.heif,.avif,application/octet-stream'><button id='analyzePhoto'>Analyze Photo</button></p><p><input id='videoInput' type='file' accept='video/*'><button id='analyzeVideo'>Analyze Video</button></p><pre id='sampleInfo'>No sample selected</pre></div>
 <div class='card'><h3>Agent output</h3><pre id='demoEvents'>No event yet</pre></div>
 </div></div>
 <script>
 function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')return '#43a047'; if(state==='yellow')return '#fdd835'; return '#777';}
+function detectLampVisual(){
+  const color=getComputedStyle(document.getElementById('lamp')).backgroundColor;
+  if(color.includes('229, 57, 53')) return 'red';
+  if(color.includes('67, 160, 71')) return 'green';
+  if(color.includes('253, 216, 53')) return 'yellow';
+  return 'unknown';
+}
 (async()=>{
   let stream=null;
-  let videoOverlayTimer=null;
-  const cam=document.getElementById('cam');
-  const photo=document.getElementById('photoPreview');
-  const vid=document.getElementById('videoPreview');
-  const ov=document.getElementById('mediaOv');
-  const mediaMsg=document.getElementById('mediaMessage');
-  const camState=document.getElementById('camstate');
-  const vision=document.getElementById('vision');
-
-  function showMode(mode){
-    cam.style.display=(mode==='camera')?'block':'none';
-    photo.style.display=(mode==='photo')?'block':'none';
-    vid.style.display=(mode==='video')?'block':'none';
-  }
-  function stopVideoOverlay(){ if(videoOverlayTimer){clearInterval(videoOverlayTimer); videoOverlayTimer=null;} }
-  function syncCanvasSize(target){ov.width=target.clientWidth||target.videoWidth||target.naturalWidth||640; ov.height=target.clientHeight||target.videoHeight||target.naturalHeight||360;}
-  function drawBoxes(target, objects, stateText){
-    syncCanvasSize(target);
-    const ctx=ov.getContext('2d');
-    ctx.clearRect(0,0,ov.width,ov.height);
-    (objects||[]).forEach((o)=>{
-      const b=o.bbox||[0.15,0.2,0.2,0.3];
-      const x=(b[0]<=1?b[0]*ov.width:b[0]);
-      const y=(b[1]<=1?b[1]*ov.height:b[1]);
-      const w=(b[2]<=1?b[2]*ov.width:b[2]);
-      const h=(b[3]<=1?b[3]*ov.height:b[3]);
-      const cls=(o.class||'object').toLowerCase();
-      const color=cls.includes('light')?'#ff5252':cls.includes('sign')?'#40c4ff':'#ffd740';
-      ctx.strokeStyle=color; ctx.lineWidth=3; ctx.strokeRect(x,y,w,h);
-      const label=(o.class||'obj')+' '+Math.round((o.confidence||0)*100)+'%';
-      ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(x,Math.max(0,y-20),Math.max(80,label.length*7),18);
-      ctx.fillStyle='#fff'; ctx.font='12px Arial'; ctx.fillText(label,x+4,Math.max(12,y-7));
-    });
-    mediaMsg.textContent=stateText||'Analyzing...';
-  }
-  function applyEventVisual(payload){
-    const st=(payload.traffic_light_state||'unknown').toLowerCase();
-    document.getElementById('lamp').style.background=lampColor(st);
-    const warn=document.getElementById('warn');
-    const msg=payload.message||(st==='red'?'RED LIGHT - STOP':st==='green'?'GREEN - GO':'CAUTION');
-    warn.textContent=msg; warn.style.display='block';
-    warn.style.background=(st==='green')?'rgba(40,130,70,0.85)':(st==='yellow')?'rgba(214,163,18,0.92)':(st==='red')?'rgba(200,40,40,0.85)':'rgba(98,98,98,0.85)';
-  }
   async function startCam(){
-    try{
-      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
-      cam.srcObject=stream; showMode('camera'); camState.textContent='Camera connected'; mediaMsg.textContent='Live camera active';
-    }catch(e){camState.textContent='Camera unavailable. Use photo/video upload mode. Details: '+e; mediaMsg.textContent='Camera unavailable';}
+    try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});document.getElementById('cam').srcObject=stream;document.getElementById('camstate').textContent='Camera connected';}
+    catch(e){document.getElementById('camstate').textContent='Camera unavailable in this browser/device: '+e;}
   }
-  function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop()); stream=null;} cam.srcObject=null; camState.textContent='Camera stopped'; }
-
-  function updateMap(lat,lon){
-    document.getElementById('gm').src='https://maps.google.com/maps?q='+lat+','+lon+'&z=17&output=embed';
-    vision.textContent='real location: '+lat+','+lon;
+  function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop()); stream=null;} document.getElementById('cam').srcObject=null; document.getElementById('camstate').textContent='Camera stopped'; }
+  document.getElementById('startCam').onclick=startCam;
+  document.getElementById('stopCam').onclick=stopCam;
+  await startCam();
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition((pos)=>{
+      const lat=pos.coords.latitude.toFixed(6);
+      const lon=pos.coords.longitude.toFixed(6);
+      document.getElementById('gm').src='https://maps.google.com/maps?q='+lat+','+lon+'&z=17&output=embed';
+      document.getElementById('vision').textContent='real location: '+lat+','+lon;
+    });
   }
-  function initGeo(){
-    if(!navigator.geolocation){vision.textContent='vision: geolocation not supported'; return;}
-    navigator.geolocation.getCurrentPosition(
-      (pos)=>updateMap(pos.coords.latitude.toFixed(6),pos.coords.longitude.toFixed(6)),
-      (err)=>{vision.textContent='location error: '+err.message+' (using demo fallback until permission granted)';},
-      {enableHighAccuracy:true, timeout:7000, maximumAge:1000},
-    );
-  }
-
-  document.getElementById('startCam').onclick=()=>{stopVideoOverlay(); startCam();};
-  document.getElementById('stopCam').onclick=()=>{stopCam(); stopVideoOverlay();};
-  document.getElementById('retryGeo').onclick=()=>initGeo();
-
   async function fileToDataUrl(file){return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
-
-  document.getElementById('analyzePhoto').onclick=async()=>{
-    const f=document.getElementById('photoInput').files[0]; if(!f){camState.textContent='Select a photo first.'; return;}
-    stopCam(); stopVideoOverlay();
-    photo.src=URL.createObjectURL(f); showMode('photo');
-    const r=await fetch('/ops/analyze-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_data:await fileToDataUrl(f)})});
-    const d=await r.json(); const payload=d.result||d;
-    document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
-    drawBoxes(photo,payload.objects||[],(payload.traffic_light_state||'unknown').toUpperCase());
-    applyEventVisual(payload);
-  };
-
-  document.getElementById('analyzeVideo').onclick=async()=>{
-    const f=document.getElementById('videoInput').files[0]; if(!f){camState.textContent='Select a video first.'; return;}
-    stopCam(); stopVideoOverlay();
-    vid.src=URL.createObjectURL(f); showMode('video'); await vid.play().catch(()=>{});
-    const r=await fetch('/ops/analyze-video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({video_name:f.name})});
-    const d=await r.json(); const payload=d.result||d;
-    document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
-    const timeline=payload.timeline||[]; let i=0;
-    const render=()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; drawBoxes(vid,frame.objects||payload.objects||[],frame.message||payload.message||'CAUTION'); applyEventVisual(frame.traffic_light_state?frame:payload); i+=1;};
-    render(); videoOverlayTimer=setInterval(render,700);
-  };
-
-  document.getElementById('analyzeYoutube').onclick=async()=>{
-    const link=document.getElementById('ytInput').value.trim(); if(!link){camState.textContent='Provide a YouTube link.'; return;}
-    stopCam(); stopVideoOverlay(); showMode('video'); vid.src='';
-    const r=await fetch('/ops/analyze-youtube',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({youtube_url:link})});
-    const d=await r.json(); const payload=d.result||d;
-    document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
-    const timeline=payload.timeline||[]; let i=0;
-    const render=()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; drawBoxes(vid,frame.objects||payload.objects||[],(frame.message||payload.message||'CAUTION')+' | source: YouTube'); applyEventVisual(frame.traffic_light_state?frame:payload); i+=1;};
-    render(); videoOverlayTimer=setInterval(render,700);
-  };
-
+  document.getElementById('analyzePhoto').onclick=async()=>{const f=document.getElementById('photoInput').files[0]; if(!f){return;} const payload={image_data: await fileToDataUrl(f)}; const r=await fetch('/ops/analyze-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const d=await r.json(); document.getElementById('sampleInfo').textContent=JSON.stringify(d,null,2);};
+  document.getElementById('analyzeVideo').onclick=async()=>{const f=document.getElementById('videoInput').files[0]; if(!f){return;} const payload={video_name:f.name}; const r=await fetch('/ops/analyze-video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const d=await r.json(); document.getElementById('sampleInfo').textContent=JSON.stringify(d,null,2);};
   document.getElementById('runDemo').onclick=async()=>{
-    try{
-      const dataset=document.getElementById('ds').value;
-      const r=await fetch('/demo/random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset_name:dataset})});
-      const d=await r.json();
-      document.getElementById('sampleInfo').textContent=JSON.stringify(d.sample,null,2);
-      document.getElementById('demoEvents').textContent=JSON.stringify(d.event,null,2);
-      const state=(d.event&&d.event.light&&d.event.light.state)?String(d.event.light.state).toLowerCase():'unknown';
-      applyEventVisual({traffic_light_state:state,message:(d.event&&d.event.message)||'No warning'});
-      const gps=(d.sample && d.sample.frame && d.sample.frame.gps)?d.sample.frame.gps:null;
-      if(gps && gps.lat && gps.lon){updateMap(gps.lat,gps.lon);} 
-    }catch(err){ camState.textContent='Demo request failed: '+err; }
+    const dataset=document.getElementById('ds').value;
+    const r=await fetch('/demo/random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset_name:dataset})}); const d=await r.json();
+    document.getElementById('sampleInfo').textContent=JSON.stringify(d.sample,null,2);
+    const st=(d.event.light && d.event.light.state) ? d.event.light.state : 'unknown';
+    document.getElementById('demoEvents').textContent=JSON.stringify(d.event,null,2);
+    document.getElementById('demoEvents').style.color=(st==='green')?'#76ff9f':(st==='yellow')?'#ffe082':(st==='red')?'#ff8a80':'#e0e0e0';
+    document.getElementById('lamp').style.background=lampColor(st);
+    document.getElementById('vision').textContent='visual detection: '+detectLampVisual();
+    const warn=document.getElementById('warn');
+    const msg=(d.event && d.event.message) ? d.event.message : 'No warning';
+    warn.textContent=msg; warn.style.display='block';
+    if(st==='green'){warn.style.background='rgba(40,130,70,0.85)';}
+    else if(st==='yellow'){warn.style.background='rgba(214,163,18,0.92)';}
+    else if(st==='red'){warn.style.background='rgba(200,40,40,0.85)';}
+    else{warn.style.background='rgba(98,98,98,0.85)';}
+    const gps=(d.sample && d.sample.frame && d.sample.frame.gps)?d.sample.frame.gps:null;
+    if(gps && gps.lat && gps.lon){
+      document.getElementById('gm').src='https://maps.google.com/maps?q='+gps.lat+','+gps.lon+'&z=17&output=embed';
+    }else{
+      const route=(d.sample && d.sample.frame && d.sample.frame.route_id) ? d.sample.frame.route_id : 'Berlin';
+      document.getElementById('gm').src='https://maps.google.com/maps?q='+encodeURIComponent(route)+'&z=13&output=embed';
+    }
   };
-
-  initGeo();
 })();
 </script></body></html>"""
     return (
@@ -1281,100 +1167,28 @@ def analyze_uploaded_image(image_data: str) -> dict[str, object]:
         {
             "class": "traffic_light",
             "confidence": 0.86,
-            "bbox": [0.62, 0.18, 0.12, 0.22],
             "how_detected": "bbox model + HSV redundancy",
         },
         {
-            "class": "traffic_sign",
-            "confidence": 0.72,
-            "bbox": [0.22, 0.22, 0.11, 0.13],
-            "how_detected": "symbol-region classifier",
+            "class": "vehicle",
+            "confidence": 0.74,
+            "how_detected": "optional TAO VehicleTypeNet mapping",
         },
     ]
     return detected
 
 
 def analyze_uploaded_video(video_name: str) -> dict[str, object]:
-    timeline = [
-        {
-            "t_ms": 0,
-            "traffic_light_state": "red",
-            "message": "RED LIGHT - STOP",
-            "objects": [
-                {
-                    "class": "traffic_light",
-                    "confidence": 0.84,
-                    "bbox": [0.62, 0.18, 0.12, 0.22],
-                    "source": "TAO TrafficCamNet adapter",
-                },
-                {
-                    "class": "traffic_sign",
-                    "confidence": 0.71,
-                    "bbox": [0.22, 0.22, 0.11, 0.13],
-                    "source": "dashcam heuristic",
-                },
-            ],
-        },
-        {
-            "t_ms": 700,
-            "traffic_light_state": "yellow",
-            "message": "YELLOW - PREPARE",
-            "objects": [
-                {
-                    "class": "traffic_light",
-                    "confidence": 0.82,
-                    "bbox": [0.62, 0.18, 0.12, 0.22],
-                    "source": "TAO TrafficCamNet adapter",
-                },
-                {
-                    "class": "traffic_sign",
-                    "confidence": 0.69,
-                    "bbox": [0.22, 0.22, 0.11, 0.13],
-                    "source": "dashcam heuristic",
-                },
-            ],
-        },
-        {
-            "t_ms": 1400,
-            "traffic_light_state": "green",
-            "message": "GREEN - GO",
-            "objects": [
-                {
-                    "class": "traffic_light",
-                    "confidence": 0.88,
-                    "bbox": [0.62, 0.18, 0.12, 0.22],
-                    "source": "TAO TrafficCamNet adapter",
-                },
-                {
-                    "class": "traffic_sign",
-                    "confidence": 0.73,
-                    "bbox": [0.22, 0.22, 0.11, 0.13],
-                    "source": "dashcam heuristic",
-                },
-            ],
-        },
-    ]
     return {
         "video": video_name,
         "status": "processed_stub",
         "traffic_light_state": "green",
-        "message": "GREEN - GO",
-        "objects": timeline[0]["objects"],
-        "timeline": timeline,
+        "objects": [
+            {"class": "traffic_light", "confidence": 0.81, "source": "TAO TrafficCamNet adapter"},
+            {"class": "person", "confidence": 0.69, "source": "TAO PeopleNet adapter"},
+            {"class": "vehicle", "confidence": 0.77, "source": "TAO VehicleTypeNet adapter"},
+        ],
     }
-
-
-def analyze_youtube_link(youtube_url: str) -> dict[str, object]:
-    normalized = youtube_url.strip()
-    if not normalized.startswith(
-        ("https://www.youtube.com/", "https://youtube.com/", "https://youtu.be/")
-    ):
-        return {"error": "invalid_youtube_url", "url": youtube_url}
-    result = analyze_uploaded_video("youtube_stream")
-    result["source"] = "youtube"
-    result["youtube_url"] = normalized
-    result["status"] = "processed_realtime_stub"
-    return result
 
 
 class ReusableHTTPServer(ThreadingHTTPServer):
@@ -1594,18 +1408,6 @@ class APIServer:
                             "ok": True,
                             "action": "analyze-video",
                             "result": analyze_uploaded_video(video_name),
-                        },
-                    )
-                    return
-                if self.path == "/ops/analyze-youtube":
-                    params = self._json_body()
-                    youtube_url = str(params.get("youtube_url", "")).strip()
-                    self._send(
-                        HTTPStatus.OK,
-                        {
-                            "ok": True,
-                            "action": "analyze-youtube",
-                            "result": analyze_youtube_link(youtube_url),
                         },
                     )
                     return

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Version: 0.9.15
+Version: 0.9.12
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -24,45 +24,23 @@ class Selection:
 def choose_targets(changed_files: list[str]) -> Selection:
     if any(path.startswith("shared/specs/") for path in changed_files):
         return Selection(
-            run_android=True,
-            run_gadget=True,
-            run_brain=True,
-            reason="shared_specs_changed",
+            run_android=True, run_gadget=True, run_brain=True, reason="shared_specs_changed"
         )
 
-    brain_changed = any(
-        path.startswith(("src/core/", "src/ampel_app/", "proto/python/")) for path in changed_files
-    )
     mobile_changed = any(path.startswith("mobile/") for path in changed_files)
-    gadget_changed = any(path.startswith(("gadget/", "hal/runtime/")) for path in changed_files)
+    gadget_changed = any(path.startswith("gadget/") for path in changed_files)
 
     if mobile_changed and gadget_changed:
         return Selection(
-            run_android=True,
-            run_gadget=True,
-            run_brain=True,
-            reason="mobile_and_gadget_changed",
+            run_android=True, run_gadget=True, run_brain=True, reason="mobile_and_gadget_changed"
         )
     if mobile_changed:
         return Selection(
-            run_android=True,
-            run_gadget=False,
-            run_brain=True,
-            reason="mobile_changed",
+            run_android=True, run_gadget=False, run_brain=True, reason="mobile_changed"
         )
     if gadget_changed:
         return Selection(
-            run_android=False,
-            run_gadget=True,
-            run_brain=True,
-            reason="gadget_changed",
-        )
-    if brain_changed:
-        return Selection(
-            run_android=False,
-            run_gadget=False,
-            run_brain=True,
-            reason="brain_changed",
+            run_android=False, run_gadget=True, run_brain=True, reason="gadget_changed"
         )
 
     return Selection(run_android=True, run_gadget=True, run_brain=True, reason="default_full")
