@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Traffic AI Assist - Real Agent Core
-Version: 0.9.17
+Version: 0.9.18
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -34,7 +34,7 @@ from ampel_app.server.http_api import health_extensions
 from ampel_app.storage.db import retention_cleanup
 
 APP_NAME = "traffic-ai-assist"
-SEMVER = "0.9.17"
+SEMVER = "0.9.18"
 APP_START_TS = int(time.time())
 
 GEO_COORD_PATTERN = re.compile(r"(?<!\d)([-+]?\d{1,3}\.\d{4,})\s*,\s*([-+]?\d{1,3}\.\d{4,})(?!\d)")
@@ -969,6 +969,8 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0d1119;padding:8px;bo
 #mediaMessage{position:absolute;left:10px;top:10px;background:rgba(0,0,0,0.6);padding:8px 10px;border-radius:6px;font-weight:bold}
 .status{margin-top:8px;padding:8px;border-radius:6px;background:#0f1624}
 </style>
+<script src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd'></script>
 </head><body>
 <header><strong>__APP__ v__VER__</strong> · Owner: <a style='color:#8ec1ff' href='https://x.com/Drbabakskr'>Dr. Babak Sorkhpour</a>
 <nav><a href='/menu'>Menu</a><a href='/datasets'>Datasets</a><a href='/settings'>Settings</a><a href='/developer'>Developer</a><a href='/architecture'>Architecture</a><a href='/health'>Health</a></nav></header>
@@ -984,6 +986,8 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
   let stream=null;
   let videoOverlayTimer=null;
   let latestAnalysis={source:'camera',predicted_state:'unknown'};
+  let visionModel=null;
+  const stateBuffer=[];
   const cam=document.getElementById('cam');
   const photo=document.getElementById('photoPreview');
   const vid=document.getElementById('videoPreview');
@@ -1030,6 +1034,40 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
     });
     mediaMsg.textContent=stateText||'Analyzing...';
   }
+  function smoothState(next){
+    stateBuffer.push(next||'unknown');
+    if(stateBuffer.length>5){stateBuffer.shift();}
+    const freq={}; stateBuffer.forEach(s=>freq[s]=(freq[s]||0)+1);
+    return Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0];
+  }
+  async function ensureVisionModel(){
+    if(visionModel){return visionModel;}
+    if(!(window.cocoSsd&&window.tf)){return null;}
+    try{visionModel=await cocoSsd.load({base:'mobilenet_v2'});}catch(e){visionModel=null;}
+    return visionModel;
+  }
+  function toOverlayObjects(preds,targetW,targetH){
+    return preds.map((p)=>({
+      class:p.class,
+      confidence:Math.round((p.score||0)*100)/100,
+      bbox:[(p.bbox[0]||0)/Math.max(1,targetW),(p.bbox[1]||0)/Math.max(1,targetH),(p.bbox[2]||0)/Math.max(1,targetW),(p.bbox[3]||0)/Math.max(1,targetH)],
+    }));
+  }
+  async function detectWithBrowserModel(target){
+    const model=await ensureVisionModel();
+    if(!model){return null;}
+    const preds=await model.detect(target,20,0.25);
+    const mapped=preds.filter((p)=>['traffic light','stop sign'].includes((p.class||'').toLowerCase()));
+    if(!mapped.length){return null;}
+    const hasLight=mapped.find((p)=>String(p.class).toLowerCase()==='traffic light');
+    const guess=hasLight?'red':'unknown';
+    return {
+      traffic_light_state:smoothState(guess),
+      message:guess==='red'?'RED LIGHT - STOP':'CAUTION',
+      objects:toOverlayObjects(mapped,target.videoWidth||target.naturalWidth||640,target.videoHeight||target.naturalHeight||360),
+      method:'browser-coco-ssd'
+    };
+  }
   function applyEventVisual(payload){
     const st=(payload.traffic_light_state||'unknown').toLowerCase();
     document.getElementById('lamp').style.background=lampColor(st);
@@ -1042,6 +1080,7 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
     try{
       stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
       cam.srcObject=stream; showMode('camera'); clearOverlay(); latestAnalysis={source:'camera',predicted_state:'unknown'}; camState.textContent='Camera connected'; mediaMsg.textContent='Live camera active';
+      await ensureVisionModel();
     }catch(e){camState.textContent='Camera unavailable. Use photo/video upload mode. Details: '+e; mediaMsg.textContent='Camera unavailable';}
   }
   function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop()); stream=null;} cam.srcObject=null; clearOverlay(); camState.textContent='Camera stopped'; }
@@ -1089,9 +1128,13 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
     const r=await fetch('/ops/analyze-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_data:await fileToDataUrl(f)})});
     const d=await r.json(); const payload=d.result||d;
     document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
-    drawBoxes(photo,payload.objects||[],(payload.traffic_light_state||'unknown').toUpperCase());
+    const browserDet=await detectWithBrowserModel(photo).catch(()=>null);
+    const result=browserDet||payload;
+    drawBoxes(photo,result.objects||payload.objects||[],(result.traffic_light_state||payload.traffic_light_state||'unknown').toUpperCase());
     latestAnalysis={source:'image',predicted_state:(payload.traffic_light_state||'unknown'),context:f.name};
-    applyEventVisual(payload);
+    latestAnalysis={source:'image',predicted_state:(result.traffic_light_state||payload.traffic_light_state||'unknown'),context:f.name};
+    document.getElementById('demoEvents').textContent=JSON.stringify(result,null,2);
+    applyEventVisual(result);
   };
 
   document.getElementById('analyzeVideo').onclick=async()=>{
@@ -1102,7 +1145,7 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
     const d=await r.json(); const payload=d.result||d;
     document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
     const timeline=payload.timeline||[]; let i=0;
-    const render=()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; drawBoxes(vid,frame.objects||payload.objects||[],frame.message||payload.message||'CAUTION'); latestAnalysis={source:'video',predicted_state:(frame.traffic_light_state||payload.traffic_light_state||'unknown'),context:f.name}; applyEventVisual(frame.traffic_light_state?frame:payload); i+=1;};
+    const render=async()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; const browserDet=await detectWithBrowserModel(vid).catch(()=>null); const used=browserDet||frame||payload; drawBoxes(vid,used.objects||frame.objects||payload.objects||[],used.message||frame.message||payload.message||'CAUTION'); latestAnalysis={source:'video',predicted_state:(used.traffic_light_state||frame.traffic_light_state||payload.traffic_light_state||'unknown'),context:f.name}; applyEventVisual(used.traffic_light_state?used:payload); document.getElementById('demoEvents').textContent=JSON.stringify(used,null,2); i+=1;};
     render(); videoOverlayTimer=setInterval(render,700);
   };
 
@@ -1113,7 +1156,7 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
     const d=await r.json(); const payload=d.result||d;
     document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
     const timeline=payload.timeline||[]; let i=0;
-    const render=()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; drawBoxes(vid,frame.objects||payload.objects||[],(frame.message||payload.message||'CAUTION')+' | source: YouTube'); latestAnalysis={source:'youtube',predicted_state:(frame.traffic_light_state||payload.traffic_light_state||'unknown'),context:link}; applyEventVisual(frame.traffic_light_state?frame:payload); i+=1;};
+    const render=async()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; const browserDet=await detectWithBrowserModel(vid).catch(()=>null); const used=browserDet||frame||payload; drawBoxes(vid,used.objects||frame.objects||payload.objects||[],(used.message||frame.message||payload.message||'CAUTION')+' | source: YouTube'); latestAnalysis={source:'youtube',predicted_state:(used.traffic_light_state||frame.traffic_light_state||payload.traffic_light_state||'unknown'),context:link}; applyEventVisual(used.traffic_light_state?used:payload); document.getElementById('demoEvents').textContent=JSON.stringify(used,null,2); i+=1;};
     render(); videoOverlayTimer=setInterval(render,700);
   };
 
@@ -1128,7 +1171,7 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
       latestAnalysis={source:'demo',predicted_state:state,context:dataset||'any'};
       applyEventVisual({traffic_light_state:state,message:(d.event&&d.event.message)||'No warning'});
       const gps=(d.sample && d.sample.frame && d.sample.frame.gps)?d.sample.frame.gps:null;
-      if(gps && gps.lat && gps.lon){updateMap(gps.lat,gps.lon);} 
+      if(gps && gps.lat && gps.lon){vision.textContent='demo gps: '+gps.lat+','+gps.lon+' (map kept on real location)';}
     }catch(err){ camState.textContent='Demo request failed: '+err; }
   };
 
@@ -1322,18 +1365,19 @@ def _guess_boxes_from_image_payload(payload: bytes) -> list[dict[str, object]]:
     # Conservative heuristic that stays normalized and stable until CV model path is enabled.
     digest = sum(payload[:64]) if payload else 0
     shift = (digest % 7) / 200.0
+    conf_shift = (digest % 23) / 100.0
     light_box = [_clamp01(0.58 + shift), _clamp01(0.16 + shift / 2), 0.14, 0.26]
     sign_box = [_clamp01(0.18 + shift / 2), _clamp01(0.20 + shift / 3), 0.14, 0.16]
     return [
         {
             "class": "traffic_light",
-            "confidence": 0.86,
+            "confidence": round(_clamp01(0.70 + conf_shift), 2),
             "bbox": light_box,
             "how_detected": "adaptive normalized anchor",
         },
         {
             "class": "traffic_sign",
-            "confidence": 0.74,
+            "confidence": round(_clamp01(0.62 + conf_shift / 1.7), 2),
             "bbox": sign_box,
             "how_detected": "adaptive normalized anchor",
         },

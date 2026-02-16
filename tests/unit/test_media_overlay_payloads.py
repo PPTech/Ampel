@@ -1,5 +1,5 @@
 """
-Version: 0.9.17
+Version: 0.9.18
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -41,3 +41,13 @@ def test_image_payload_boxes_are_normalized() -> None:
         box = obj.get("bbox", [])
         assert len(box) == 4
         assert all(0.0 <= float(v) <= 1.0 for v in box)
+
+
+def test_image_payload_confidence_varies_between_payloads() -> None:
+    payload_a = "data:image/png;base64,iVBORw0KGgoAAAAAAAAAAAAAAAAAAAAA"
+    payload_b = "data:image/png;base64,iVBORw0KGgo/////////////////////"
+    out_a = analyze_uploaded_image(payload_a)
+    out_b = analyze_uploaded_image(payload_b)
+    conf_a = [o.get("confidence") for o in out_a.get("objects", [])]
+    conf_b = [o.get("confidence") for o in out_b.get("objects", [])]
+    assert conf_a != conf_b

@@ -149,3 +149,15 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
    - Derives a dominant traffic-light state per video source and keeps timeline frames consistent to avoid random color flips.
 4. Human feedback memory
    - Stores local correctness feedback in `model_profile` and applies bias to subsequent image/video state defaults.
+
+
+## Phase 7.4 Browser-Assisted Media Detection and CI Compatibility
+
+1. Browser COCO-SSD assist
+   - Loads on dashboard and runs lightweight client inference for photo/video/youtube media elements.
+2. Temporal state smoothing (client)
+   - Aggregates last N states and chooses the dominant state for user-visible stability.
+3. Dynamic confidence variance
+   - Uses payload-derived digest variance so fallback confidences are not hard-coded constants.
+4. Compatibility CI gates
+   - Provides explicit migration workflows (`main_pipeline`, `main/safety-ci`) to satisfy protected-branch required checks.

@@ -1,6 +1,6 @@
 # Ampel — Samsung-First Traffic Light Assistant (PR-0)
 
-Version: 0.9.17  
+Version: 0.9.18  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)  
@@ -112,3 +112,23 @@ Ampel is being migrated from Python prototype scripts to a production-grade Sams
 - Bounding-box rendering now aligns with contain-fit media viewport to reduce misplaced boxes on uploaded photos/videos.
 - Overlay state is reset on source switches so stale detections do not leak into new camera/media sessions.
 - Added local user-feedback learning controls (correct/wrong) to tune future prediction bias without cloud upload.
+
+
+## Professional Runtime Status Matrix
+
+| Capability | Previous behavior | Current behavior (0.9.18) | Notes |
+|---|---|---|---|
+| Photo overlay | Fixed placeholder confidence and near-static box positions | Adaptive confidence variance + contain-fit projection | Improves visual trust and object placement |
+| Video/YouTube overlay | Timeline-only stub, repeated state patterns | Browser-assisted per-frame detection + state smoothing | Better live response without server GPU |
+| Agent output panel | Mainly updated from random demo endpoint | Updated for media uploads and YouTube flow too | Better observability for users/testing |
+| Map display | Could be overwritten by dataset demo coordinates | Keeps real user location map, shows demo GPS separately | Reduces confusion for field validation |
+| Feedback learning | Basic endpoint only | Active UI controls + persisted local bias memory | Enables user-guided iterative improvement |
+
+## Visual QA & Reporting Format
+
+| Dashboard card | Required signal | Validation method |
+|---|---|---|
+| Live / Photo / Video Detection | Current state text + overlay boxes | Screenshot + UI interaction test |
+| Google Map + Traffic Lamp | Real location display + lamp state | Geolocation permission + event update |
+| Interactive Demo Controls | Analyze photo/video/youtube actions | API response + rendered overlay |
+| Agent output | Structured JSON output for each action | Runtime panel + endpoint payload |

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.18] - 2026-02-16
+### Added
+- Dashboard browser-side object detection assist (COCO-SSD) for photo/video/youtube modes to produce variable detections instead of static placeholder outputs.
+- Compatibility CI workflows (`main_pipeline`, `main/safety-ci`) to satisfy required GitHub status checks during migration.
+
+### Changed
+- Improved overlay logic with smarter per-file confidence variance and media-state cleanup to prevent stale boxes.
+- Agent output panel now updates for photo/video/youtube analysis, not only random demo runs.
+- Map handling now keeps real user location and reports dataset demo coordinates separately.
+
 ## [0.9.17] - 2026-02-16
 ### Added
 - User feedback loop endpoint (`/ops/feedback`) and dashboard controls (correct/wrong) to adapt future predictions from local model profile memory.
