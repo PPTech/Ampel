@@ -1,6 +1,6 @@
 # MEMORY.md
 
-Version: 0.9.9  
+Version: 0.9.10  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -38,3 +38,5 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 - PR-2 introduces deterministic TTC-based rule engine for safety-critical non-AI decisions.
 
 - PR-3 introduces TFLite detector adapter, anti-flicker temporal buffer, and lane-estimation heuristics for mobile-safe vision pipeline.
+
+- PR-4 Android MVP introduces CameraX + TFLite + Compose overlay stack under `mobile/android`.

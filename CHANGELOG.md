@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.10] - 2026-02-16
+### Added
+- PR-4 Android Gradle Kotlin DSL app module skeleton (`mobile/android/app/build.gradle.kts`) with CameraX, TFLite, Compose, and Accompanist dependencies.
+- PR-4 Android manifest scaffold (`mobile/android/app/src/main/AndroidManifest.xml`) with camera/location/internet permissions.
+- PR-4 CameraX pipeline manager (`mobile/android/app/src/main/java/com/pptech/ampel/camera/CameraManager.kt`) using background `ExecutorService` and VGA target resolution (640x480) for thermal safety.
+- PR-4 TFLite wrapper (`mobile/android/app/src/main/java/com/pptech/ampel/ai/TrafficLightDetector.kt`) with NNAPI delegate preference and GPU fallback.
+- PR-4 Compose UI (`mobile/android/app/src/main/java/com/pptech/ampel/ui/MainScreen.kt`) with `PreviewView`, detection overlay, and status banner.
+- BDD feature for Android pipeline behavior (`features/android_mvp_camera_pipeline.feature`).
+
 ## [0.9.9] - 2026-02-16
 ### Added
 - PR-3 TFLite-first detector adapter `src/core/vision/detector.py` implementing mobile-friendly inference plumbing with fallback mode.

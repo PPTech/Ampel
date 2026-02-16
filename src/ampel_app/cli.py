@@ -32,7 +32,7 @@ from ampel_app.server.http_api import health_extensions
 from ampel_app.storage.db import retention_cleanup
 
 APP_NAME = "traffic-ai-assist"
-SEMVER = "0.9.9"
+SEMVER = "0.9.10"
 APP_START_TS = int(time.time())
 
 GEO_COORD_PATTERN = re.compile(r"(?<!\d)([-+]?\d{1,3}\.\d{4,})\s*,\s*([-+]?\d{1,3}\.\d{4,})(?!\d)")

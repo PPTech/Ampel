@@ -1,6 +1,6 @@
 # Ampel — Samsung-First Traffic Light Assistant (PR-0)
 
-Version: 0.9.9  
+Version: 0.9.10  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)  
@@ -54,3 +54,11 @@ Ampel is being migrated from Python prototype scripts to a production-grade Sams
 - Anti-flicker temporal smoothing: `src/core/vision/smoothing.py`
 - Lane heuristic estimator: `src/core/vision/lane_estimator.py`
 - New unit test for one-frame glitch rejection: `tests/unit/test_temporal_smoothing.py`
+
+
+## PR-4 Android MVP Implementation
+
+- Android app skeleton initialized under `mobile/android/app/` with CameraX, Jetpack Compose, Accompanist, and TFLite dependencies.
+- Camera pipeline scaffold: `CameraManager.kt` (background analyzer + VGA thermal safety target).
+- On-device inference scaffold: `TrafficLightDetector.kt` (NNAPI preferred, GPU fallback).
+- Compose UI scaffold: `MainScreen.kt` with camera preview, overlay boxes, and top status banner.

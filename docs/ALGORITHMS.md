@@ -68,3 +68,13 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 3. Emit `Valid Alert` only when the same state persists for 3 consecutive frames (~100ms at 30 FPS).
 4. If no light is seen for > 5s while context indicates intersection, emit fail-safe visual warning: `Check Traffic Light`.
 5. Otherwise remain in `Scanning...` state.
+
+
+## PR-4 Android MVP Runtime Pipeline
+
+1. Camera stream acquisition uses CameraX `Preview + ImageAnalysis` with `STRATEGY_KEEP_ONLY_LATEST`.
+2. Analyzer runs on a dedicated single-thread executor for deterministic latency and UI isolation.
+3. Frames are resized and normalized for TensorFlow Lite model input.
+4. Delegate strategy attempts NNAPI first (Samsung NPU path), then GPU fallback if NNAPI is unavailable.
+5. Top detection class maps to app-level light state label and confidence.
+6. Compose overlay renders inferred bounding boxes and a status banner for driver feedback.
