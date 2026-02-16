@@ -1,0 +1,9 @@
+{
+  "name": "S2TLD code repository",
+  "url": "https://github.com/Thinklab-SJTU/S2TLD",
+  "scope": "Traffic light detection model implementation",
+  "license": "Repository license (check upstream)",
+  "usage": "Model architecture reference for improved detector",
+  "status": "online_reference",
+  "sample_count": "unknown"
+}
