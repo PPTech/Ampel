@@ -1,6 +1,6 @@
 # Ampel — Samsung-First Traffic Light Assistant (PR-0)
 
-Version: 0.9.15  
+Version: 0.9.16  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)  
@@ -100,3 +100,9 @@ Ampel is being migrated from Python prototype scripts to a production-grade Sams
 - Single CI workflow now runs on `master` with Predictive Test Selection and hygiene gates.
 - Threat model documented in `docs/THREAT_MODEL.md`.
 - Runtime artifacts are blocked from git by `.gitignore` and CI checks.
+
+## Phase 7.2 Dashboard UX Reliability
+
+- Fixed camera pending UX with explicit permission/retry messaging and better fallback states.
+- Improved media stage behavior so uploaded photo/video/YouTube content consistently replaces live camera and shows overlay/action reactions.
+- Enhanced developer mode object detection using COCO-SSD temporal smoothing and clearer status telemetry.

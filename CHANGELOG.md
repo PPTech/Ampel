@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.16] - 2026-02-16
+### Added
+- Dashboard UX reliability updates for camera pending states, geolocation retry control, and robust media stage handling for photo/video/YouTube workflows.
+- Developer mode visual status panel and temporal object smoothing to improve recognition stability during live camera analysis.
+
+### Changed
+- Updated web dashboard rendering in `src/ampel_app/cli.py` to keep overlays and action messages synchronized with uploaded media timelines.
+- Bumped runtime semantic version to `0.9.16` and aligned release metadata files.
+
 ## [0.9.15] - 2026-02-16
 ### Added
 - Threat model document `docs/THREAT_MODEL.md` defining assets, attackers, trust boundaries, and mitigations.

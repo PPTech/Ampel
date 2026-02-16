@@ -125,3 +125,15 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 3. Runtime artifact scanner blocks checked-in logs/db/zip artifacts.
 4. Brain tests run unit + BDD + self/security checks.
 5. Android and gadget jobs run only when selected by PTS.
+
+
+## Phase 7.2 Dashboard and Developer Detection Reliability
+
+1. `dashboard_html` media state machine
+   - Switches a single visual stage between camera/photo/video modes and keeps overlays synced to active source.
+2. Camera permission fallback loop
+   - Detects permission/runtime errors and surfaces deterministic retry guidance instead of silent blank preview.
+3. YouTube timeline reaction bridge
+   - Converts URL-derived analysis timeline into per-frame reaction text + object box overlays.
+4. Developer mode temporal smoothing
+   - Aggregates recent labels and suppresses one-frame spikes for steadier object cards and overlays.
