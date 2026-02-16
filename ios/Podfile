@@ -1,0 +1,11 @@
+# Version: 0.9.1
+# License: MIT
+# Code generated with support from CODEX and CODEX CLI.
+# Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+platform :ios, '15.0'
+use_frameworks!
+
+target 'AmpelAI' do
+  # Permissive-license object detection runtime path
+  pod 'TensorFlowLiteSwift'
+end

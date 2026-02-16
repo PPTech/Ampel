@@ -1,0 +1,9 @@
+{
+  "name": "Roboflow traffic-light-oq7uj",
+  "url": "https://universe.roboflow.com/traffic-light-detection-qsrxn/traffic-light-oq7uj/browse?queryText=&pageSize=50&startingIndex=0&browseQuery=true",
+  "scope": "Annotated traffic-light detection dataset",
+  "license": "Roboflow universe terms",
+  "usage": "Additional labeled examples for detector tuning",
+  "status": "online_reference",
+  "sample_count": "unknown"
+}

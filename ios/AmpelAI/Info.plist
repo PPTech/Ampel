@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>AmpelAI</string>
+    <key>MAPBOX_ACCESS_TOKEN</key>
+    <string>$(MAPBOX_ACCESS_TOKEN)</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Required for traffic light detection and navigation safety. Für Ampelerkennung und sichere Navigation erforderlich.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Required for lane-aware navigation, hazard alerts, and safe route guidance. Erforderlich für spurbezogene Navigation, Gefahrenwarnungen und sichere Routenführung.</string>
+</dict>
+</plist>

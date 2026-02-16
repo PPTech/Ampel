@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ampel.local/specs/traffic_event.schema.json",
+  "title": "Ampel Traffic Event",
+  "description": "Version: 0.9.7 | License: MIT | Code generated with support from CODEX and CODEX CLI. | Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "timestamp",
+    "state",
+    "confidence",
+    "gps_location",
+    "action_required"
+  ],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["RED", "YELLOW", "GREEN", "UNKNOWN"]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "bbox": {
+      "type": "array",
+      "description": "Optional [x, y, w, h] in normalized or pixel coordinates by runtime contract",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "lane_id": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "gps_location": {
+      "type": "string",
+      "minLength": 16,
+      "description": "Encrypted/anonymized location token. NEVER raw lat/lon."
+    },
+    "action_required": {
+      "type": "string",
+      "enum": ["NONE", "WARN", "CRITICAL_STOP"]
+    }
+  }
+}

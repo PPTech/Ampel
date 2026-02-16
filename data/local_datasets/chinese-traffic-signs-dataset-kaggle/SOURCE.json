@@ -1,0 +1,9 @@
+{
+  "name": "Chinese Traffic Signs dataset (Kaggle)",
+  "url": "https://www.kaggle.com/datasets/dmitryyemelyanov/chinese-traffic-signs/data",
+  "scope": "Traffic signs classification/detection",
+  "license": "Kaggle dataset terms",
+  "usage": "Road sign domain coverage",
+  "status": "download_required",
+  "sample_count": "unknown"
+}
