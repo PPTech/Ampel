@@ -1,6 +1,6 @@
 # Ampel — Samsung-First Traffic Light Assistant (PR-0)
 
-Version: 0.9.10  
+Version: 0.9.11  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)  
@@ -62,3 +62,11 @@ Ampel is being migrated from Python prototype scripts to a production-grade Sams
 - Camera pipeline scaffold: `CameraManager.kt` (background analyzer + VGA thermal safety target).
 - On-device inference scaffold: `TrafficLightDetector.kt` (NNAPI preferred, GPU fallback).
 - Compose UI scaffold: `MainScreen.kt` with camera preview, overlay boxes, and top status banner.
+
+
+## PR-5 Security Hardening & Privacy Compliance
+
+- ProGuard/R8 hardening rules in `mobile/android/app/proguard-rules.pro`.
+- Runtime tamper detection in `IntegrityManager.kt` (signature verification + Knox/TIMA capability check).
+- Encrypted preference storage via `SecureStorage.kt` (`EncryptedSharedPreferences` + `MasterKey`).
+- Privacy manager kill-switch in `PrivacyManager.kt` for GDPR erase and edge-only request enforcement.

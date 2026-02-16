@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.11] - 2026-02-16
+### Added
+- PR-5 Android release hardening rules in `mobile/android/app/proguard-rules.pro` for obfuscation, CameraX/TFLite keeps, and stripping `Log.d`/`Log.v` calls.
+- PR-5 runtime tamper checks in `mobile/android/app/src/main/java/com/pptech/ampel/security/IntegrityManager.kt` including signature SHA-256 verification and Knox/TIMA-capability probing.
+- PR-5 GDPR encrypted preference layer in `mobile/android/app/src/main/java/com/pptech/ampel/data/SecureStorage.kt` using `EncryptedSharedPreferences` + `MasterKey`.
+- PR-5 privacy kill-switch in `mobile/android/app/src/main/java/com/pptech/ampel/privacy/PrivacyManager.kt` for local data erase and edge-only network/domain controls.
+- BDD feature `features/security_privacy_hardening.feature` for integrity, erase, and edge-only policy behavior.
+
+### Changed
+- Android module gradle config now includes `androidx.security:security-crypto` and BuildConfig signature placeholder for integrity validation.
+
 ## [0.9.10] - 2026-02-16
 ### Added
 - PR-4 Android Gradle Kotlin DSL app module skeleton (`mobile/android/app/build.gradle.kts`) with CameraX, TFLite, Compose, and Accompanist dependencies.

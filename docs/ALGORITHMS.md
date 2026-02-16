@@ -78,3 +78,12 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 4. Delegate strategy attempts NNAPI first (Samsung NPU path), then GPU fallback if NNAPI is unavailable.
 5. Top detection class maps to app-level light state label and confidence.
 6. Compose overlay renders inferred bounding boxes and a status banner for driver feedback.
+
+
+## PR-5 Security/Privacy Runtime Flow
+
+1. On app start, integrity manager computes signing certificate SHA-256 and compares with approved release hash.
+2. If mismatch is detected, runtime raises `SecurityException` and safety-critical AI path is disabled.
+3. SecureStorage persists sensitive settings using Android Keystore-backed `MasterKey` and encrypted shared preferences.
+4. Privacy manager enforces edge-only outbound policy: non-whitelisted domains or raw media payload attempts are blocked.
+5. GDPR kill-switch erases secure prefs, shared prefs, databases, cache, and log artifacts on demand.

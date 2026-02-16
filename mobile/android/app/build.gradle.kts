@@ -1,5 +1,5 @@
 /*
-Version: 0.9.10
+Version: 0.9.11
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -18,8 +18,10 @@ android {
         applicationId = "com.pptech.ampel"
         minSdk = 26
         targetSdk = 34
-        versionCode = 910
-        versionName = "0.9.10"
+        versionCode = 911
+        versionName = "0.9.11"
+
+        buildConfigField("String", "OFFICIAL_SIG_SHA256", "\"REPLACE_WITH_RELEASE_CERT_SHA256\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -51,6 +53,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -90,6 +93,7 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     testImplementation("junit:junit:4.13.2")
 }
