@@ -65,7 +65,7 @@ python3 -m pip install --upgrade pip
 | `./traffic_ai_runner.sh demo` | Runs demo alert pipeline on sample frames. | Quick functional smoke test. |
 | `./traffic_ai_runner.sh datasync` | Syncs dataset manifest metadata to SQLite. | After updating dataset manifests. |
 | `./traffic_ai_runner.sh compilemanifest` | Compiles and deduplicates dataset manifest. | Before training-plan generation. |
-| `./traffic_ai_runner.sh syncmain [service]` | Runs the full auto-update flow: stop service, fetch, merge latest remote branch, resolve policy conflicts, push main, restart service, health-check. | Daily fork-to-main sync with one command. |
+| `./traffic_ai_runner.sh syncmain` | Merges branch to main with post-check scripts. | Release prep / branch sync. |
 | `./traffic_ai_runner.sh abtest` | Runs A/B behavior comparison report. | Before publishing a version. |
 | `./traffic_ai_runner.sh security` | Runs local security static checks. | Before PR/release. |
 
