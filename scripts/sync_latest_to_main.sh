@@ -44,27 +44,22 @@ is_runtime_path() {
 }
 
 stash_created=0
-stash_restored=0
 service_managed=0
 service_stopped=0
 service_restarted=0
 
-restore_runtime_stash() {
-  if (( stash_created == 1 )) && (( stash_restored == 0 )); then
-    log "restoring runtime stash ($STASH_NAME)"
-    if git stash pop --quiet; then
-      stash_restored=1
-    else
-      warn "could not auto-restore runtime stash. Apply manually with: git stash pop"
-    fi
-  fi
-}
-
 cleanup() {
   local exit_code=$?
 
-  if (( stash_created == 1 )) && (( stash_restored == 0 )) && (( exit_code != 0 )); then
-    warn "runtime stash kept for safety ($STASH_NAME)"
+  if (( stash_created == 1 )); then
+    if (( exit_code == 0 )); then
+      log "restoring runtime stash ($STASH_NAME)"
+      if ! git stash pop --quiet; then
+        warn "could not auto-restore runtime stash. Apply manually with: git stash pop"
+      fi
+    else
+      warn "runtime stash kept for safety ($STASH_NAME)"
+    fi
   fi
 
   if (( service_managed == 1 )) && (( service_stopped == 1 )) && (( service_restarted == 0 )); then
@@ -180,8 +175,6 @@ fi
 
 log "pushing $TARGET_BRANCH to $REMOTE"
 git push "$REMOTE" "$TARGET_BRANCH"
-
-restore_runtime_stash
 
 mkdir -p var/log var/data
 touch var/log/ampel.log

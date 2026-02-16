@@ -64,5 +64,4 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 - Operational notes: script now stops `ampel.service`, allows only runtime drift (`traffic_ai.sqlite3`, `var/data/traffic_ai.sqlite3`, `var/log/ampel.log`), stashes runtime files, fetches and fast-forwards `main`, merges the latest remote branch by commit date, resolves conflicts with `MEMORY.md` as `--ours` and all other files as `--theirs`, pushes `main`, restarts service, and verifies `/health`.
 - Bugfix note: stash behavior now targets only the currently dirty runtime paths so ignored files do not break `git stash push`.
 - Bugfix note: latest-branch selection avoids `pipefail`/`SIGPIPE` (`141`) by removing the `head` pipeline pattern.
-- Bugfix note: runtime stash is restored before service restart to avoid `var/log/ampel.log` conflicts.
 - Commit IDs: pending (captured in git history once committed).
