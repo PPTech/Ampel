@@ -1,6 +1,6 @@
 # MEMORY.md
 
-Version: 0.9.15  
+Version: 0.9.21  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -55,3 +55,12 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 - Phase 7.1 consolidates CI into a single master-branch workflow with PTS and artifact hygiene enforcement.
 
 - Threat model documentation added to formalize trust boundaries and defense-in-depth assumptions.
+
+- Dashboard media intelligence now uses browser-assisted detection overlays for photo/video/YouTube paths to avoid static placeholder outputs.
+- Dataset operations are now managed through license-aware import/list/delete APIs with alias-aware demo sampling for robust local QA loops.
+- Overlay rendering reliability improved with contain-fit box projection, source-switch resets, and stale-bbox prevention across media modes.
+- Color-state inference now uses HSV + region-weighted sampling with timeline-aware transitions for more accurate red/yellow/green messaging.
+- Android MVP preprocessing now converts YUV_420_888 frames to RGB for real detector input; release builds require injected `OFFICIAL_SIG_SHA256`.
+- Privacy edge-only enforcement is centralized through `PrivacyManager.EdgeOnlyPolicy` to block non-allowlisted/raw-media egress.
+- CI/CD governance now aligns to `main` with explicit Python + Kotlin quality gates and compatibility check naming for branch protection.
+- Validation coverage now includes dataset alias selection, video state progression, and YouTube stale-box cleanup scenarios.
