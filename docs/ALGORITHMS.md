@@ -1,6 +1,6 @@
 # ALGORITHMS.md
 
-Version: 0.9.7  
+Version: 0.9.4  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -68,32 +68,3 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 3. Emit `Valid Alert` only when the same state persists for 3 consecutive frames (~100ms at 30 FPS).
 4. If no light is seen for > 5s while context indicates intersection, emit fail-safe visual warning: `Check Traffic Light`.
 5. Otherwise remain in `Scanning...` state.
-
-
-## PR-4 Android MVP Runtime Pipeline
-
-1. Camera stream acquisition uses CameraX `Preview + ImageAnalysis` with `STRATEGY_KEEP_ONLY_LATEST`.
-2. Analyzer runs on a dedicated single-thread executor for deterministic latency and UI isolation.
-3. Frames are resized and normalized for TensorFlow Lite model input.
-4. Delegate strategy attempts NNAPI first (Samsung NPU path), then GPU fallback if NNAPI is unavailable.
-5. Top detection class maps to app-level light state label and confidence.
-6. Compose overlay renders inferred bounding boxes and a status banner for driver feedback.
-
-
-## PR-5 Security/Privacy Runtime Flow
-
-1. On app start, integrity manager computes signing certificate SHA-256 and compares with approved release hash.
-2. If mismatch is detected, runtime raises `SecurityException` and safety-critical AI path is disabled.
-3. SecureStorage persists sensitive settings using Android Keystore-backed `MasterKey` and encrypted shared preferences.
-4. Privacy manager enforces edge-only outbound policy: non-whitelisted domains or raw media payload attempts are blocked.
-5. GDPR kill-switch erases secure prefs, shared prefs, databases, cache, and log artifacts on demand.
-
-
-## PR-6 Monorepo CI Orchestration Flow
-
-1. `pts_selector.py` evaluates changed paths and emits platform-job flags.
-2. Workflow executes logic verification always for deterministic rule consistency.
-3. Android build/tests run only when `mobile/**` or shared contracts change.
-4. Gadget docker/integration tests run only when `gadget/**` or shared contracts change.
-5. On failures, `diagnose_failure.py` packages failed scenario hints, redacted logs, and git diff into `failure_report.zip`.
-6. `/ops/analyze-image` decodes base64 payloads, detects file signatures (jpeg/png/gif/bmp/webp/tiff/heic/heif/avif), and returns structured detection response/error.

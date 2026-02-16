@@ -1,28 +1,21 @@
-# Version: 0.9.6
+# Version: 0.9.2
 # License: MIT
 # Code generated with support from CODEX and CODEX CLI.
 # Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
-# Author: Dr. Babak Sorkhpour with support from ChatGPT
 
-# Python
-__pycache__/
-**/__pycache__/
-*.pyc
 .venv/
+__pycache__/
+*.pyc
+traffic_ai.sqlite3
+traffic_ai.log
 
-# Android/Gradle
-.gradle/
-**/.gradle/
-build/
-**/build/
-
-# ML artifacts
-*.tflite
-
-# Local secrets
+# Secrets (must stay local)
 android/local.properties
 ios/Config.xcconfig
 
-# Runtime files
-traffic_ai.sqlite3
-traffic_ai.log
+# Local debug media
+assets/test_drive_red_light.mp4
+
+# Python build artifacts
+__pycache__/
+**/__pycache__/

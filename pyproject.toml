@@ -19,5 +19,3 @@ ignore_errors = true
 [tool.ruff.lint.per-file-ignores]
 "src/ampel_app/cli.py" = ["E501"]
 "traffic_ai_assist.py" = ["E402"]
-"scripts/test_runner.py" = ["E402"]
-"tests/test_detector_mapping.py" = ["E402"]

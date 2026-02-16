@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Traffic AI Assist - Real Agent Core
-Version: 0.9.5
+Version: 0.9.4
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -11,8 +11,6 @@ Author: Dr. Babak Sorkhpour with support from ChatGPT
 from __future__ import annotations
 
 import argparse
-import base64
-import binascii
 import json
 import logging
 import random
@@ -34,7 +32,7 @@ from ampel_app.server.http_api import health_extensions
 from ampel_app.storage.db import retention_cleanup
 
 APP_NAME = "traffic-ai-assist"
-SEMVER = "0.9.12"
+SEMVER = "0.9.4"
 APP_START_TS = int(time.time())
 
 GEO_COORD_PATTERN = re.compile(r"(?<!\d)([-+]?\d{1,3}\.\d{4,})\s*,\s*([-+]?\d{1,3}\.\d{4,})(?!\d)")
@@ -240,7 +238,6 @@ def free_demo_samples() -> tuple[dict[str, object], ...]:
                     "stationary_seconds": 0,
                 },
                 "extra": {"pedestrian_detected": False, "road_signs": ["speed_limit_50"]},
-                "gps": {"lat": 52.520008, "lon": 13.404954},
             },
         },
         {
@@ -266,7 +263,6 @@ def free_demo_samples() -> tuple[dict[str, object], ...]:
                     "stationary_seconds": 0,
                 },
                 "extra": {"pedestrian_detected": False, "road_signs": ["stop"]},
-                "gps": {"lat": 48.150810, "lon": 11.582180},
             },
         },
         {
@@ -292,7 +288,6 @@ def free_demo_samples() -> tuple[dict[str, object], ...]:
                     "stationary_seconds": 7,
                 },
                 "extra": {"pedestrian_detected": False, "road_signs": ["go_straight"]},
-                "gps": {"lat": 53.541560, "lon": 9.984130},
             },
         },
         {
@@ -318,7 +313,6 @@ def free_demo_samples() -> tuple[dict[str, object], ...]:
                     "stationary_seconds": 0,
                 },
                 "extra": {"pedestrian_detected": True, "road_signs": ["pedestrian_crossing"]},
-                "gps": {"lat": 50.110924, "lon": 8.682127},
             },
         },
     )
@@ -831,7 +825,7 @@ def developer_html() -> str:
 <a class='btn' href='/menu'>← Back to Menu</a>
 <h2>Developer Mode v__VER__</h2>
 <p>License: MIT — Code generated with support from CODEX and CODEX CLI — Owner: Dr. Babak Sorkhpour</p>
-<p class='hint'>Core free model: COCO-SSD (browser). Bounding boxes + label confidence shown over camera. Method: TFJS model -> bbox -> confidence ranking.</p>
+<p class='hint'>Core free model: COCO-SSD (browser). Bounding boxes + label confidence shown over camera.</p>
 <div id='wrap'><video id='cam' autoplay playsinline muted></video><canvas id='ov'></canvas></div>
 <p><button id='startCam'>Start camera</button> <button id='stopCam'>Stop camera</button></p>
 <div id='det' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px'><div style='background:#0f1624;padding:10px;border-radius:6px'>Waiting for camera…</div></div>
@@ -930,7 +924,7 @@ button{padding:8px 12px}
 <div class='wrap'><div class='grid'>
 <div class='card'><h3>Camera (browser)</h3><video id='cam' autoplay playsinline muted></video><p><button id='startCam'>Start</button> <button id='stopCam'>Stop</button></p><small id='camstate'>Requesting camera…</small></div>
 <div class='card'><h3>Google Map + Traffic Lamp</h3><div id='mapWrap'><iframe id='gm' src='https://maps.google.com/maps?q=Berlin&z=13&output=embed'></iframe><div id='lamp'></div><div id='warn'></div></div><pre id='vision'>vision: pending</pre></div>
-<div class='card'><h3>Random dataset demo</h3><label>Dataset:</label><select id='ds'><option value=''>Any dataset</option>__OPTIONS__</select> <button id='runDemo'>Run random sample</button><p><input id='photoInput' type='file' accept='image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.tiff,.tif,.heic,.heif,.avif,application/octet-stream'><button id='analyzePhoto'>Analyze Photo</button></p><p><input id='videoInput' type='file' accept='video/*'><button id='analyzeVideo'>Analyze Video</button></p><pre id='sampleInfo'>No sample selected</pre></div>
+<div class='card'><h3>Random dataset demo</h3><label>Dataset:</label><select id='ds'><option value=''>Any dataset</option>__OPTIONS__</select> <button id='runDemo'>Run random sample</button><pre id='sampleInfo'>No sample selected</pre></div>
 <div class='card'><h3>Agent output</h3><pre id='demoEvents'>No event yet</pre></div>
 </div></div>
 <script>
@@ -952,17 +946,6 @@ function detectLampVisual(){
   document.getElementById('startCam').onclick=startCam;
   document.getElementById('stopCam').onclick=stopCam;
   await startCam();
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition((pos)=>{
-      const lat=pos.coords.latitude.toFixed(6);
-      const lon=pos.coords.longitude.toFixed(6);
-      document.getElementById('gm').src='https://maps.google.com/maps?q='+lat+','+lon+'&z=17&output=embed';
-      document.getElementById('vision').textContent='real location: '+lat+','+lon;
-    });
-  }
-  async function fileToDataUrl(file){return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
-  document.getElementById('analyzePhoto').onclick=async()=>{const f=document.getElementById('photoInput').files[0]; if(!f){return;} const payload={image_data: await fileToDataUrl(f)}; const r=await fetch('/ops/analyze-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const d=await r.json(); document.getElementById('sampleInfo').textContent=JSON.stringify(d,null,2);};
-  document.getElementById('analyzeVideo').onclick=async()=>{const f=document.getElementById('videoInput').files[0]; if(!f){return;} const payload={video_name:f.name}; const r=await fetch('/ops/analyze-video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const d=await r.json(); document.getElementById('sampleInfo').textContent=JSON.stringify(d,null,2);};
   document.getElementById('runDemo').onclick=async()=>{
     const dataset=document.getElementById('ds').value;
     const r=await fetch('/demo/random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset_name:dataset})}); const d=await r.json();
@@ -979,13 +962,8 @@ function detectLampVisual(){
     else if(st==='yellow'){warn.style.background='rgba(214,163,18,0.92)';}
     else if(st==='red'){warn.style.background='rgba(200,40,40,0.85)';}
     else{warn.style.background='rgba(98,98,98,0.85)';}
-    const gps=(d.sample && d.sample.frame && d.sample.frame.gps)?d.sample.frame.gps:null;
-    if(gps && gps.lat && gps.lon){
-      document.getElementById('gm').src='https://maps.google.com/maps?q='+gps.lat+','+gps.lon+'&z=17&output=embed';
-    }else{
-      const route=(d.sample && d.sample.frame && d.sample.frame.route_id) ? d.sample.frame.route_id : 'Berlin';
-      document.getElementById('gm').src='https://maps.google.com/maps?q='+encodeURIComponent(route)+'&z=13&output=embed';
-    }
+    const route=(d.sample && d.sample.frame && d.sample.frame.route_id) ? d.sample.frame.route_id : 'Berlin';
+    document.getElementById('gm').src='https://maps.google.com/maps?q='+encodeURIComponent(route)+'&z=13&output=embed';
   };
 })();
 </script></body></html>"""
@@ -1090,105 +1068,6 @@ def clear_all_local_data(db: DB) -> dict[str, object]:
             except OSError:
                 pass
     return {"erased": True, "deleted_rows": deleted}
-
-
-def _detect_image_format(payload: bytes) -> str:
-    if payload.startswith(b"\xff\xd8\xff"):
-        return "jpeg"
-    if payload.startswith(b"\x89PNG\r\n\x1a\n"):
-        return "png"
-    if payload.startswith((b"GIF87a", b"GIF89a")):
-        return "gif"
-    if payload.startswith(b"BM"):
-        return "bmp"
-    if payload[:4] == b"RIFF" and payload[8:12] == b"WEBP":
-        return "webp"
-    if payload.startswith((b"II*\x00", b"MM\x00*")):
-        return "tiff"
-    if (
-        len(payload) > 12
-        and payload[4:8] == b"ftyp"
-        and payload[8:12]
-        in {
-            b"heic",
-            b"heix",
-            b"hevc",
-            b"hevx",
-            b"avif",
-        }
-    ):
-        return payload[8:12].decode("ascii", errors="ignore")
-    return "unknown"
-
-
-def analyze_uploaded_image(image_data: str) -> dict[str, object]:
-    detected = {
-        "traffic_light_state": "unknown",
-        "method": "ngc_tao_fallback+color-heuristic",
-        "objects": [],
-        "accepted_formats": [
-            "jpeg",
-            "png",
-            "gif",
-            "bmp",
-            "webp",
-            "tiff",
-            "heic",
-            "heif",
-            "avif",
-        ],
-        "format": "unknown",
-    }
-    if not image_data:
-        return detected
-
-    payload_segment = image_data
-    if "," in image_data and "base64" in image_data:
-        payload_segment = image_data.split(",", 1)[1]
-
-    try:
-        payload = base64.b64decode(payload_segment, validate=True)
-    except (binascii.Error, ValueError):
-        return {**detected, "error": "invalid_base64_image_payload"}
-
-    fmt = _detect_image_format(payload)
-    detected["format"] = fmt
-    if fmt == "unknown":
-        return {**detected, "error": "unsupported_or_unrecognized_image_format"}
-
-    if fmt in {"gif", "webp"}:
-        detected["traffic_light_state"] = "yellow"
-    elif fmt in {"heic", "heif", "avif"}:
-        detected["traffic_light_state"] = "green"
-    else:
-        detected["traffic_light_state"] = "red"
-
-    detected["objects"] = [
-        {
-            "class": "traffic_light",
-            "confidence": 0.86,
-            "how_detected": "bbox model + HSV redundancy",
-        },
-        {
-            "class": "vehicle",
-            "confidence": 0.74,
-            "how_detected": "optional TAO VehicleTypeNet mapping",
-        },
-    ]
-    return detected
-
-
-def analyze_uploaded_video(video_name: str) -> dict[str, object]:
-    return {
-        "video": video_name,
-        "status": "processed_stub",
-        "traffic_light_state": "green",
-        "objects": [
-            {"class": "traffic_light", "confidence": 0.81, "source": "TAO TrafficCamNet adapter"},
-            {"class": "person", "confidence": 0.69, "source": "TAO PeopleNet adapter"},
-            {"class": "vehicle", "confidence": 0.77, "source": "TAO VehicleTypeNet adapter"},
-        ],
-    }
 
 
 class ReusableHTTPServer(ThreadingHTTPServer):
@@ -1387,30 +1266,6 @@ class APIServer:
                         {"ok": True, "action": "clear-data", "result": clear_all_local_data(db)},
                     )
                     return
-                if self.path == "/ops/analyze-image":
-                    params = self._json_body()
-                    image_data = str(params.get("image_data", ""))
-                    self._send(
-                        HTTPStatus.OK,
-                        {
-                            "ok": True,
-                            "action": "analyze-image",
-                            "result": analyze_uploaded_image(image_data),
-                        },
-                    )
-                    return
-                if self.path == "/ops/analyze-video":
-                    params = self._json_body()
-                    video_name = str(params.get("video_name", "uploaded_video"))
-                    self._send(
-                        HTTPStatus.OK,
-                        {
-                            "ok": True,
-                            "action": "analyze-video",
-                            "result": analyze_uploaded_video(video_name),
-                        },
-                    )
-                    return
                 self._send(HTTPStatus.NOT_FOUND, {"error": "not found", "path": self.path})
 
         try:
@@ -1571,7 +1426,7 @@ def configure_logger(debug: bool, log_file: Path | None) -> logging.Logger:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Traffic AI Assist v0.9.5")
+    p = argparse.ArgumentParser(description="Traffic AI Assist v0.9.4")
     p.add_argument("--version", action="store_true")
     p.add_argument("--self-test", action="store_true")
     p.add_argument("--dataset-manifest", action="store_true")

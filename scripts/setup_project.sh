@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Version: 0.9.5
+# Version: 0.9.4
 # License: MIT
 # Code generated with support from CODEX and CODEX CLI.
 # Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
