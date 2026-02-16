@@ -1,0 +1,9 @@
+Version: 0.9.3
+License: MIT
+Code generated with support from CODEX and CODEX CLI.
+Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+
+Place your local debug video here as:
+assets/test_drive_red_light.mp4
+
+The file is intentionally not bundled to avoid large binary commits and licensing issues.
