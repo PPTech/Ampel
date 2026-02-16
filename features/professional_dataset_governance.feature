@@ -17,3 +17,8 @@ Feature: Professional dataset governance and color-safe alerting
     Given media contains a traffic light region
     When dashboard estimates region color state
     Then alert message matches red/yellow/green state mapping
+
+  Scenario: Dataset alias filter still returns matching demo samples
+    Given the demo catalog contains LISA Traffic Light Dataset samples
+    When user requests random demo for "LISA traffic-light reference"
+    Then the selected sample belongs to the LISA dataset family

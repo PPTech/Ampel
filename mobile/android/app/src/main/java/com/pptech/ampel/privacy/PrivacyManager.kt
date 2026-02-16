@@ -1,5 +1,5 @@
 /*
-Version: 0.9.11
+Version: 0.9.20
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -43,9 +43,15 @@ class PrivacyManager(
     fun enforceEdgeOnly(url: String, isRawMediaPayload: Boolean = false) {
         val host = runCatching { java.net.URI(url).host?.lowercase() }.getOrNull()
             ?: throw SecurityException("Invalid URL blocked by privacy policy")
-        val allowed = allowedDomains.any { domain -> host == domain || host.endsWith(".$domain") }
-        if (!allowed || isRawMediaPayload) {
+        if (!EdgeOnlyPolicy.isAllowed(host, allowedDomains, isRawMediaPayload)) {
             throw SecurityException("Edge-only policy violation: network request blocked")
+        }
+    }
+
+    object EdgeOnlyPolicy {
+        fun isAllowed(host: String, allowedDomains: Set<String>, isRawMediaPayload: Boolean): Boolean {
+            if (isRawMediaPayload) return false
+            return allowedDomains.any { domain -> host == domain || host.endsWith(".$domain") }
         }
     }
 }

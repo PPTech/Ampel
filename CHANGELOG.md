@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.9.21] - 2026-02-16
+### Added
+- New unit coverage for dataset alias matching, video state progression, and YouTube no-stale-bbox behavior (`tests/unit/test_video_dataset_behavior.py`).
+- Additional BDD scenarios for YouTube stale-box cleanup and dataset alias random-sample selection.
+
+### Changed
+- Dashboard color estimation now uses HSV + region-weighted sampling for better red/yellow/green recognition in photo/video analysis.
+- Video/YouTube playback rendering now avoids reusing stale boxes and keeps alert message/state synchronized with the active frame.
+- Demo sample library now includes multiple entries per dataset family (including LISA yellow transition) and `/demo/random` supports alias-style dataset names.
+- Backend timeline generation for uploaded videos now includes realistic state progression and message transitions.
+
+## [0.9.20] - 2026-02-16
+### Added
+- Android unit tests for YUV conversion (`TrafficLightDetectorConversionTest`) and edge-only policy (`EdgeOnlyPolicyTest`).
+- BDD feature spec for Android frame preprocessing and release signature enforcement.
+
+### Changed
+- `TrafficLightDetector.kt`: replaced black-frame stub with YUV_420_888→RGB conversion and classifier-safe detection output (`bbox=null`, timestamp included).
+- `build.gradle.kts`: release build now requires `OFFICIAL_SIG_SHA256` from CI/gradle property; debug build uses non-blocking bypass value.
+- `main_pipeline.yml` now targets `main` and includes explicit Python/Kotlin quality gates.
+- `PrivacyManager` now enforces edge-only policy through centralized `EdgeOnlyPolicy` helper.
+
 ## [0.9.19] - 2026-02-16
 ### Added
 - Professional Dataset Manager with live imported-catalog table, license-compatibility validation, and import/delete controls.

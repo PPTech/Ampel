@@ -1,6 +1,6 @@
 # Ampel — Samsung-First Traffic Light Assistant (PR-0)
 
-Version: 0.9.19  
+Version: 0.9.21  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)  
@@ -167,3 +167,21 @@ Ampel is being migrated from Python prototype scripts to a production-grade Sams
 - Only datasets with license-compatible metadata are added to active catalog.
 - Dataset manager supports import/update/delete operations from UI and API.
 - Demo frames and catalog are local-only and can be erased via GDPR clear-data flow.
+
+
+## 🚀 Android MVP Production Readiness (v0.9.20)
+
+| Area | Improvement | Result |
+|---|---|---|
+| Camera preprocessing | Replaced `ImageProxy.toRgbBitmap()` black-frame stub with real YUV→RGB conversion | Analyzer receives real bitmap content |
+| Detection model contract | `Detection` now includes `timestamp`; classifier path returns `bbox=null` instead of synthetic boxes | Overlay remains safe and structured |
+| Security hardening | Release build requires `OFFICIAL_SIG_SHA256` injection; debug remains developer-friendly | Prevents accidental insecure release |
+| Privacy | Centralized allowlist gate via `PrivacyManager.EdgeOnlyPolicy` | Blocks non-allowlisted/raw media egress |
+| CI/CD | `main_pipeline` now targets `main` with Python+Kotlin quality gates | Better branch protection alignment |
+
+### Local validation commands
+
+- `cd mobile/android && ./gradlew :app:testDebugUnitTest`
+- `pytest -q`
+- `pytest -q tests/bdd`
+- `python3 traffic_ai_assist.py --ab-test`

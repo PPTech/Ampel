@@ -1,6 +1,6 @@
 # ALGORITHMS.md
 
-Version: 0.9.7  
+Version: 0.9.21  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -173,3 +173,20 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
    - Reads detected traffic-light region pixels and derives red/yellow/green state from channel dominance.
 4. Professional operations UX
    - Settings and dataset views grouped by workflow (diagnostics, AI ops, data governance, privacy).
+
+
+## Phase 8 Android Frame Preprocessing and Release Hardening
+
+1. `YUV_420_888 -> RGB` conversion
+   - Converts camera planes to NV21 and decodes to RGB bitmap for analyzer input.
+2. Structured classifier output contract
+   - For classifier-only TFLite outputs, emit `bbox=null`, include `timestamp`, and smooth state transitions via temporal buffer.
+3. Release signature gate
+   - Gradle release build fails if `OFFICIAL_SIG_SHA256` is not injected from CI/property.
+4. Centralized edge-only network policy
+   - All URL checks pass through `PrivacyManager.EdgeOnlyPolicy` (allowlist + raw media block).
+
+14. `dataset_name_matches` + `/demo/random`
+   - Supports dataset alias matching (e.g., "LISA traffic-light reference" -> LISA dataset family) to ensure requested dataset demos are actually loaded.
+15. `_video_timeline` + `analyze_youtube_link`
+   - Builds state progression timelines with color-aware messages and optional bbox suppression for metadata-only sources (YouTube), preventing stale overlays.

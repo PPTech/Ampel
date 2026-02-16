@@ -26,3 +26,9 @@ Feature: Photo and video overlay detections in dashboard
     Given a user reviewed a detection result
     When the user marks prediction as wrong and submits corrected state
     Then the app stores feedback bias for future image/video inference
+
+  Scenario: YouTube analysis does not keep stale boxes from previous sources
+    Given a user previously analyzed a local video with overlays
+    When the user analyzes a YouTube link
+    Then the dashboard clears stale local boxes
+    And the message stream follows the YouTube timeline states

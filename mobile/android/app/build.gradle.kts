@@ -1,5 +1,5 @@
 /*
-Version: 0.9.11
+Version: 0.9.20
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -10,6 +10,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releaseSigSha256 = (findProperty("OFFICIAL_SIG_SHA256") as String?)
+    ?: System.getenv("OFFICIAL_SIG_SHA256")
+
 android {
     namespace = "com.pptech.ampel"
     compileSdk = 34
@@ -18,10 +21,11 @@ android {
         applicationId = "com.pptech.ampel"
         minSdk = 26
         targetSdk = 34
-        versionCode = 911
-        versionName = "0.9.11"
+        versionCode = 920
+        versionName = "0.9.20"
 
-        buildConfigField("String", "OFFICIAL_SIG_SHA256", "\"REPLACE_WITH_RELEASE_CERT_SHA256\"")
+        // Debug value is non-blocking; release value is enforced below.
+        buildConfigField("String", "OFFICIAL_SIG_SHA256", "\"DEBUG_BYPASS\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -36,9 +40,17 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+
+            if (releaseSigSha256.isNullOrBlank() || releaseSigSha256 == "REPLACE_WITH_RELEASE_CERT_SHA256") {
+                throw GradleException(
+                    "OFFICIAL_SIG_SHA256 must be provided for release builds via -POFFICIAL_SIG_SHA256 or environment variable",
+                )
+            }
+            buildConfigField("String", "OFFICIAL_SIG_SHA256", "\"${releaseSigSha256}\"")
         }
         debug {
             isMinifyEnabled = false
+            buildConfigField("String", "OFFICIAL_SIG_SHA256", "\"DEBUG_BYPASS\"")
         }
     }
 

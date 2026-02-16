@@ -1,4 +1,4 @@
-# Version: 0.9.18
+# Version: 0.9.20
 # License: MIT
 # Code generated with support from CODEX and CODEX CLI.
 # Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -6,9 +6,11 @@ name: main
 
 on:
   push:
-    branches: [master]
+    branches:
+      - main
   pull_request:
-    branches: [master]
+    branches:
+      - main
 
 jobs:
   safety-ci:
@@ -21,7 +23,7 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install pytest
       - run: python3 -m py_compile traffic_ai_assist.py src/ampel_app/cli.py
-      - run: pytest -q tests/unit/test_upload_image_formats.py tests/unit/test_media_overlay_payloads.py tests/unit/test_youtube_analysis.py tests/unit/test_feedback_learning.py
+      - run: pytest -q tests/unit/test_upload_image_formats.py tests/unit/test_media_overlay_payloads.py tests/unit/test_youtube_analysis.py tests/unit/test_feedback_learning.py tests/unit/test_dataset_governance.py
       - run: python3 traffic_ai_assist.py --self-test
       - run: python3 traffic_ai_assist.py --ab-test
       - run: python3 traffic_ai_assist.py --security-check

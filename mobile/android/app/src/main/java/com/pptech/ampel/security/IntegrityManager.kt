@@ -1,5 +1,5 @@
 /*
-Version: 0.9.11
+Version: 0.9.20
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -24,9 +24,12 @@ class IntegrityManager(
     private val officialSha256Hex: String = BuildConfig.OFFICIAL_SIG_SHA256,
 ) {
     fun verifyAppSignature(): Boolean {
+        if (BuildConfig.DEBUG || officialSha256Hex == "DEBUG_BYPASS") {
+            return true
+        }
         val current = currentSigningSha256Hex() ?: return false
         val expected = officialSha256Hex.lowercase(Locale.US).replace(":", "")
-        val ok = current == expected
+        val ok = expected.isNotBlank() && current == expected
         if (!ok) {
             throw SecurityException("App signature mismatch detected; AI engine disabled")
         }

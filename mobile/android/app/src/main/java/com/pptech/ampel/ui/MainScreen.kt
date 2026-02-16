@@ -1,5 +1,5 @@
 /*
-Version: 0.9.14
+Version: 0.9.20
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -107,8 +107,8 @@ private fun OverlayView(detections: List<TrafficLightDetector.Detection>) {
             }
             drawRect(
                 color = color.copy(alpha = 0.82f),
-                topLeft = androidx.compose.ui.geometry.Offset(box[0], box[1]),
-                size = androidx.compose.ui.geometry.Size(box[2], box[3]),
+                topLeft = androidx.compose.ui.geometry.Offset(box[0].toFloat(), box[1].toFloat()),
+                size = androidx.compose.ui.geometry.Size(box[2].toFloat(), box[3].toFloat()),
                 style = Stroke(width = 5f),
             )
         }
