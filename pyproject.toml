@@ -1,0 +1,23 @@
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+lint.select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ampel_app"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_return_any = true
+ignore_errors = true
+
+[tool.ruff.lint.per-file-ignores]
+"src/ampel_app/cli.py" = ["E501"]
+"traffic_ai_assist.py" = ["E402"]
+"scripts/test_runner.py" = ["E402"]
+"tests/test_detector_mapping.py" = ["E402"]

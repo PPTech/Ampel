@@ -1,0 +1,39 @@
+// Version: 0.9.2
+// License: MIT
+// Code generated with support from CODEX and CODEX CLI.
+// Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+
+import java.util.Properties
+
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localProps.load(new FileInputStream(localPropsFile))
+}
+
+def mapboxToken = localProps.getProperty('MAPBOX_ACCESS_TOKEN', '')
+
+android {
+    namespace 'com.ampelai'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.ampelai"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "0.9.2"
+
+        buildConfigField "String", "MAPBOX_ACCESS_TOKEN", "\"${mapboxToken}\""
+    }
+}
+
+dependencies {
+    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
+}

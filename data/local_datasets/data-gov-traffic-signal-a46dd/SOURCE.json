@@ -1,0 +1,9 @@
+{
+  "name": "Data.gov traffic-signal-a46dd",
+  "url": "https://catalog.data.gov/dataset/traffic-signal-a46dd",
+  "scope": "Traffic signal public data",
+  "license": "Data.gov source-specific terms",
+  "usage": "Signal location metadata enrichment",
+  "status": "online_reference",
+  "sample_count": "unknown"
+}

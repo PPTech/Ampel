@@ -1,0 +1,9 @@
+{
+  "name": "S2TLD XML dataset (Kaggle)",
+  "url": "https://www.kaggle.com/datasets/sovitrath/s2tld-720x1280-traffic-light-detection-xml-format",
+  "scope": "Traffic light detection dataset",
+  "license": "Kaggle dataset terms",
+  "usage": "Primary training data source for traffic lamp detection",
+  "status": "download_required",
+  "sample_count": "unknown"
+}
