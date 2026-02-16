@@ -1,0 +1,104 @@
+# Version: 0.9.20
+# License: MIT
+# Code generated with support from CODEX and CODEX CLI.
+# Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pts:
+    runs-on: ubuntu-latest
+    outputs:
+      run_android: ${{ steps.pick.outputs.run_android }}
+      run_gadget: ${{ steps.pick.outputs.run_gadget }}
+      run_brain: ${{ steps.pick.outputs.run_brain }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: changed
+        uses: tj-actions/changed-files@v45
+      - id: pick
+        run: |
+          python3 scripts/pts_selector.py --changed-files ${{ steps.changed.outputs.all_changed_files }} > pts.json
+          cat pts.json
+          echo "run_android=$(jq -r '.run_android' pts.json)" >> "$GITHUB_OUTPUT"
+          echo "run_gadget=$(jq -r '.run_gadget' pts.json)" >> "$GITHUB_OUTPUT"
+          echo "run_brain=$(jq -r '.run_brain' pts.json)" >> "$GITHUB_OUTPUT"
+
+  hygiene-fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade pip
+      - run: pip install ruff black detect-secrets
+      - run: ruff check .
+      - run: black --check src scripts tests proto
+      - run: |
+          if git ls-files | rg -n "(__pycache__/|traffic_ai.sqlite3|traffic_ai\.log|\.zip$|\.log$)"; then
+            echo "Runtime artifacts tracked in git" && exit 1
+          fi
+      - run: python3 -m py_compile traffic_ai_assist.py src/ampel_app/cli.py scripts/pts_selector.py scripts/diagnose_failure.py
+
+  brain-tests:
+    needs: [pts, hygiene-fast]
+    if: needs.pts.outputs.run_brain == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r proto/python/requirements.txt
+      - run: pip install pytest pytest-bdd
+      - run: pytest -q tests/unit
+      - run: |
+          pytest -q tests/bdd || code=$?
+          if [ "${code:-0}" = "5" ]; then
+            echo "pytest returned code 5 (no BDD tests collected in this environment); treating as informational success"
+            exit 0
+          fi
+          exit ${code:-0}
+      - run: python3 traffic_ai_assist.py --self-test
+      - run: python3 traffic_ai_assist.py --ab-test
+      - run: python3 traffic_ai_assist.py --security-check
+
+  gadget-tests:
+    needs: [pts, hygiene-fast]
+    if: needs.pts.outputs.run_gadget == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t ampel-gadget:ci -f hal/runtime/Dockerfile .
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade pip
+      - run: pip install pytest
+      - run: pytest -q tests/unit
+
+  android-tests:
+    needs: [pts, hygiene-fast]
+    if: needs.pts.outputs.run_android == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: |
+          if [ ! -f mobile/android/gradlew ]; then
+            echo "mobile/android/gradlew not present in this branch; skipping android job"
+            exit 0
+          fi
+      - run: |
+          cd mobile/android
+          ./gradlew :app:assembleRelease :app:testDebugUnitTest

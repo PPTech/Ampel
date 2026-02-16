@@ -1,0 +1,9 @@
+{
+  "name": "Mendeley traffic light dataset",
+  "url": "https://data.mendeley.com/datasets/9tm59d3nsn/1",
+  "scope": "Traffic-light related dataset",
+  "license": "Mendeley dataset license (verify upstream)",
+  "usage": "Additional training/validation diversity",
+  "status": "download_required",
+  "sample_count": "unknown"
+}
