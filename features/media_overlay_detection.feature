@@ -32,3 +32,9 @@ Feature: Photo and video overlay detections in dashboard
     When the user analyzes a YouTube link
     Then the dashboard clears stale local boxes
     And the message stream follows the YouTube timeline states
+
+  Scenario: Missing traffic light in mixed scene returns explicit not-found message
+    Given a mixed image without a lane-relevant vehicle traffic light
+    When dashboard analyzes the image
+    Then response state is unknown
+    And dashboard shows TRAFFIC LIGHT NOT FOUND message

@@ -1,6 +1,6 @@
 # Ampel — Samsung-First Traffic Light Assistant (PR-0)
 
-Version: 0.9.21  
+Version: 0.9.22  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)  

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.22] - 2026-02-16
+### Added
+- Unit assertion for rejecting unrelated dataset aliases in random-sample filtering (`test_dataset_name_matching_rejects_unrelated_dataset`).
+- BDD scenarios for explicit not-found messaging in mixed scenes and clear API response when a selected dataset has no seeded demo frames.
+
+### Changed
+- Dashboard now updates map location from selected demo sample GPS (instead of always keeping current camera location).
+- `/demo/random` now returns `dataset_has_no_demo_samples` when a chosen dataset has no seeded frames and avoids repeating the same sample consecutively per dataset selection.
+- Photo/video browser detection now emits explicit `TRAFFIC LIGHT NOT FOUND` payloads when lane-relevant vehicle lights are not detected.
+- Video upload playback flow now waits for media readiness and provides clearer user feedback when autoplay is blocked.
+
 ## [0.9.21] - 2026-02-16
 ### Added
 - New unit coverage for dataset alias matching, video state progression, and YouTube no-stale-bbox behavior (`tests/unit/test_video_dataset_behavior.py`).

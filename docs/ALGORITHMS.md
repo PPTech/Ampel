@@ -1,6 +1,6 @@
 # ALGORITHMS.md
 
-Version: 0.9.21  
+Version: 0.9.22  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -190,3 +190,6 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
    - Supports dataset alias matching (e.g., "LISA traffic-light reference" -> LISA dataset family) to ensure requested dataset demos are actually loaded.
 15. `_video_timeline` + `analyze_youtube_link`
    - Builds state progression timelines with color-aware messages and optional bbox suppression for metadata-only sources (YouTube), preventing stale overlays.
+
+22. Dashboard not-found and dataset-specific sample policy
+   - Browser detection now emits explicit not-found payloads for non-lane-relevant or missing traffic lights, and random demo selection fails fast for datasets with no seeded frames.

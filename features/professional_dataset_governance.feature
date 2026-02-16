@@ -22,3 +22,8 @@ Feature: Professional dataset governance and color-safe alerting
     Given the demo catalog contains LISA Traffic Light Dataset samples
     When user requests random demo for "LISA traffic-light reference"
     Then the selected sample belongs to the LISA dataset family
+
+  Scenario: Selecting a dataset without seeded demo samples returns a clear error
+    Given user selected a dataset with no seeded demo frames
+    When user requests a random sample
+    Then API responds with dataset_has_no_demo_samples

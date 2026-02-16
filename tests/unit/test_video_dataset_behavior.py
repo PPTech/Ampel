@@ -26,3 +26,7 @@ def test_youtube_payload_avoids_stale_boxes() -> None:
     assert all(
         "bbox" not in obj for frame in out.get("timeline", []) for obj in frame.get("objects", [])
     )
+
+
+def test_dataset_name_matching_rejects_unrelated_dataset() -> None:
+    assert not dataset_name_matches("S2TLD XML dataset (Kaggle)", "LISA Traffic Light Dataset")

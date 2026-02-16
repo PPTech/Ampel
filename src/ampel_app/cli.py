@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Traffic AI Assist - Real Agent Core
-Version: 0.9.21
+Version: 0.9.22
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -34,7 +34,7 @@ from ampel_app.server.http_api import health_extensions
 from ampel_app.storage.db import retention_cleanup
 
 APP_NAME = "traffic-ai-assist"
-SEMVER = "0.9.21"
+SEMVER = "0.9.22"
 APP_START_TS = int(time.time())
 
 GEO_COORD_PATTERN = re.compile(r"(?<!\d)([-+]?\d{1,3}\.\d{4,})\s*,\s*([-+]?\d{1,3}\.\d{4,})(?!\d)")
@@ -1111,6 +1111,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0d1119;padding:8px;bo
 </div></div>
 <script>
 function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')return '#43a047'; if(state==='yellow')return '#fdd835'; return '#777';}
+function noTrafficPayload(reason){return {traffic_light_state:'unknown',message:reason||'TRAFFIC LIGHT NOT FOUND',objects:[],method:'browser-coco-ssd'};}
 (async()=>{
   let stream=null;
   let videoOverlayTimer=null;
@@ -1234,16 +1235,28 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
     const model=await ensureVisionModel();
     if(!model){return null;}
     const preds=await model.detect(target,20,0.25);
-    const mapped=preds.filter((p)=>['traffic light','stop sign'].includes((p.class||'').toLowerCase()));
-    if(!mapped.length){return null;}
-    const hasLight=mapped.find((p)=>String(p.class).toLowerCase()==='traffic light');
-    const rawGuess=hasLight?estimateLightColor(target,hasLight.bbox||[0,0,0,0]):'unknown';
+    const lights=preds.filter((p)=>String(p.class||'').toLowerCase()==='traffic light');
+    const signs=preds.filter((p)=>String(p.class||'').toLowerCase()==='stop sign');
+    if(!lights.length){
+      return noTrafficPayload('TRAFFIC LIGHT NOT FOUND');
+    }
+    const mainLight=lights.sort((a,b)=>(b.score||0)-(a.score||0))[0];
+    const rawGuess=estimateLightColor(target,mainLight.bbox||[0,0,0,0]);
+    const w=Math.max(1,mainLight.bbox?.[2]||1), h=Math.max(1,mainLight.bbox?.[3]||1);
+    const aspect=w/h;
+    const pedestrianLike=(rawGuess==='green' && aspect<0.48);
+    if(pedestrianLike){
+      return noTrafficPayload('Pedestrian signal detected; vehicle traffic light not found');
+    }
     const state=smoothState(rawGuess);
-    const msg=(state==='red')?'RED LIGHT - STOP':(state==='green')?'GREEN - GO':(state==='yellow')?'YELLOW - PREPARE':'CAUTION';
+    if(state==='unknown'){
+      return noTrafficPayload('TRAFFIC LIGHT NOT FOUND');
+    }
+    const msg=(state==='red')?'RED LIGHT - STOP':(state==='green')?'GREEN - GO':'YELLOW - PREPARE';
     return {
       traffic_light_state:state,
       message:msg,
-      objects:toOverlayObjects(mapped,target.videoWidth||target.naturalWidth||640,target.videoHeight||target.naturalHeight||360),
+      objects:toOverlayObjects([mainLight,...signs],target.videoWidth||target.naturalWidth||640,target.videoHeight||target.naturalHeight||360),
       method:'browser-coco-ssd'
     };
   }
@@ -1309,28 +1322,32 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
     document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
     const browserDet=await detectWithBrowserModel(photo).catch(()=>null);
     const result=browserDet||payload;
-    drawBoxes(photo,result.objects||payload.objects||[],(result.traffic_light_state||payload.traffic_light_state||'unknown').toUpperCase());
-    latestAnalysis={source:'image',predicted_state:(payload.traffic_light_state||'unknown'),context:f.name};
-    latestAnalysis={source:'image',predicted_state:(result.traffic_light_state||payload.traffic_light_state||'unknown'),context:f.name};
-    document.getElementById('demoEvents').textContent=JSON.stringify(result,null,2);
-    applyEventVisual(result);
+    const effective=(result && result.traffic_light_state && result.traffic_light_state!=='unknown')?result:noTrafficPayload('TRAFFIC LIGHT NOT FOUND IN IMAGE');
+    drawBoxes(photo,effective.objects||[],(effective.traffic_light_state||'unknown').toUpperCase());
+    latestAnalysis={source:'image',predicted_state:(effective.traffic_light_state||'unknown'),context:f.name};
+    document.getElementById('demoEvents').textContent=JSON.stringify(effective,null,2);
+    applyEventVisual(effective);
   };
 
   document.getElementById('analyzeVideo').onclick=async()=>{
     const f=document.getElementById('videoInput').files[0]; if(!f){camState.textContent='Select a video first.'; return;}
     stopCam(); stopVideoOverlay();
-    vid.src=URL.createObjectURL(f); showMode('video'); await vid.play().catch(()=>{});
+    vid.src=URL.createObjectURL(f); showMode('video');
+    await new Promise((resolve)=>{vid.onloadeddata=()=>resolve(true); vid.onerror=()=>resolve(false);});
+    const playStarted=await vid.play().then(()=>true).catch(()=>false);
+    if(!playStarted){camState.textContent='Video preview could not autoplay; press play on the video control.';}
     const r=await fetch('/ops/analyze-video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({video_name:f.name})});
     const d=await r.json(); const payload=d.result||d;
     document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
     const timeline=payload.timeline||[]; let i=0;
-    const render=async()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; const browserDet=await detectWithBrowserModel(vid).catch(()=>null); const used=browserDet||frame||payload; const objs=Array.isArray(used.objects)?used.objects:(Array.isArray(frame.objects)?frame.objects:[]); drawBoxes(vid,objs,used.message||frame.message||payload.message||'CAUTION'); latestAnalysis={source:'video',predicted_state:(used.traffic_light_state||frame.traffic_light_state||payload.traffic_light_state||'unknown'),context:f.name}; applyEventVisual({traffic_light_state:(used.traffic_light_state||frame.traffic_light_state||payload.traffic_light_state||'unknown'),message:(used.message||frame.message||payload.message||'CAUTION')}); document.getElementById('demoEvents').textContent=JSON.stringify(used,null,2); i+=1;};
+    const render=async()=>{const frame=timeline[i%Math.max(1,timeline.length)]||{}; const browserDet=await detectWithBrowserModel(vid).catch(()=>null); const used=browserDet&&browserDet.traffic_light_state!=='unknown'?browserDet:frame; const effective=used&&Object.keys(used).length?used:noTrafficPayload('TRAFFIC LIGHT NOT FOUND IN VIDEO FRAME'); const objs=Array.isArray(effective.objects)?effective.objects:[]; drawBoxes(vid,objs,effective.message||'CAUTION'); latestAnalysis={source:'video',predicted_state:(effective.traffic_light_state||'unknown'),context:f.name}; applyEventVisual({traffic_light_state:(effective.traffic_light_state||'unknown'),message:(effective.message||'CAUTION')}); document.getElementById('demoEvents').textContent=JSON.stringify(effective,null,2); i+=1;};
     render(); videoOverlayTimer=setInterval(render,700);
   };
 
   document.getElementById('analyzeYoutube').onclick=async()=>{
     const link=document.getElementById('ytInput').value.trim(); if(!link){camState.textContent='Provide a YouTube link.'; return;}
     stopCam(); stopVideoOverlay(); showMode('video'); vid.src='';
+    camState.textContent='YouTube direct frame playback is browser-limited; showing timeline analysis only.';
     const r=await fetch('/ops/analyze-youtube',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({youtube_url:link})});
     const d=await r.json(); const payload=d.result||d;
     document.getElementById('sampleInfo').textContent=JSON.stringify(payload,null,2);
@@ -1350,7 +1367,7 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
       latestAnalysis={source:'demo',predicted_state:state,context:dataset||'any'};
       applyEventVisual({traffic_light_state:state,message:(d.event&&d.event.message)||'No warning'});
       const gps=(d.sample && d.sample.frame && d.sample.frame.gps)?d.sample.frame.gps:null;
-      if(gps && gps.lat && gps.lon){vision.textContent='demo gps: '+gps.lat+','+gps.lon+' (map kept on real location)';}
+      if(gps && gps.lat && gps.lon){updateMap(gps.lat,gps.lon); vision.textContent='demo location: '+gps.lat+','+gps.lon+' (updated from selected dataset sample)';}
     }catch(err){ camState.textContent='Demo request failed: '+err; }
   };
 
@@ -1855,22 +1872,41 @@ class APIServer:
                     bs.sync_catalog()
                     bs.seed_demo_samples()
                     cur = db.conn.cursor()
-                    cur.execute("SELECT dataset_name, frame_payload FROM demo_sample_frames")
+                    cur.execute(
+                        "SELECT sample_id, dataset_name, frame_payload FROM demo_sample_frames"
+                    )
                     all_rows = cur.fetchall()
                     if selected_dataset:
                         fetched = [
                             row
                             for row in all_rows
-                            if dataset_name_matches(selected_dataset, str(row[0]))
+                            if dataset_name_matches(selected_dataset, str(row[1]))
                         ]
                         if not fetched:
-                            fetched = all_rows
+                            self._send(
+                                HTTPStatus.BAD_REQUEST,
+                                {
+                                    "error": "dataset_has_no_demo_samples",
+                                    "dataset_name": selected_dataset,
+                                },
+                            )
+                            return
                     else:
                         fetched = all_rows
                     if not fetched:
                         self._send(HTTPStatus.BAD_REQUEST, {"error": "no demo frames"})
                         return
-                    dataset_name, frame_raw = random.choice(fetched)
+                    memory_key = f"demo.last.sample.{_normalized_name(selected_dataset or 'any')}"
+                    cur.execute("SELECT value FROM model_profile WHERE model_key=?", (memory_key,))
+                    row = cur.fetchone()
+                    last_sample_id = str(row[0]) if row and row[0] else ""
+                    candidates = [x for x in fetched if str(x[0]) != last_sample_id] or fetched
+                    sample_id, dataset_name, frame_raw = random.choice(candidates)
+                    cur.execute(
+                        "INSERT INTO model_profile(model_key,value,updated_at) VALUES(?,?,?) ON CONFLICT(model_key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                        (memory_key, str(sample_id), int(time.time())),
+                    )
+                    db.conn.commit()
                     frame_obj = json.loads(str(frame_raw))
                     sample = {
                         "frame": frame_obj,
