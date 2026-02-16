@@ -1,0 +1,12 @@
+// Version: 0.9.3
+// License: MIT
+// Code generated with support from CODEX and CODEX CLI.
+// Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+
+SWIFT_COMPILATION_MODE = wholemodule
+SWIFT_OPTIMIZATION_LEVEL = -O
+COPY_PHASE_STRIP = YES
+STRIP_INSTALLED_PRODUCT = YES
+DEBUG_INFORMATION_FORMAT = dwarf
+ENABLE_TESTABILITY = NO
+GCC_GENERATE_DEBUGGING_SYMBOLS = NO

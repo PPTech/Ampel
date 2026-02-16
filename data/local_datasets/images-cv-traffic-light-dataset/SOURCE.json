@@ -1,0 +1,9 @@
+{
+  "name": "images.cv traffic light dataset",
+  "url": "https://images.cv/download/traffic_light/1679",
+  "scope": "Traffic light object detection images",
+  "license": "Check source terms before use",
+  "usage": "Extra visual domain diversity",
+  "status": "download_required",
+  "sample_count": "unknown"
+}

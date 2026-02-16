@@ -1,0 +1,96 @@
+# Version: 0.9.20
+# License: MIT
+# Code generated with support from CODEX and CODEX CLI.
+# Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
+name: main_pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  quality-gates:
+    name: Quality Gates (Python + Kotlin)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python quality tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black pytest pytest-bdd
+      - name: Python lint
+        run: ruff check src tests scripts
+      - name: Python format check
+        run: black --check src tests scripts
+      - name: Python tests
+        run: pytest -q tests/unit
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Kotlin/Android lint + unit tests
+        run: |
+          if [ ! -f mobile/android/gradlew ]; then
+            echo "android wrapper missing; fail quality gate"
+            exit 1
+          fi
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew :app:lintDebug :app:testDebugUnitTest
+
+  logic-verification-bdd:
+    name: Logic Verification (BDD)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade pip
+      - run: pip install pytest pytest-bdd
+      - run: pytest -q tests/bdd
+
+  android-build-unit:
+    name: Android Build + Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: |
+          if [ ! -f mobile/android/gradlew ]; then
+            echo "android wrapper missing"
+            exit 1
+          fi
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest
+
+  gadget-docker-integration:
+    name: Gadget Docker Build + Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          if [ ! -f hal/runtime/Dockerfile ]; then
+            echo "gadget dockerfile missing"
+            exit 1
+          fi
+          docker build -t ampel-gadget:compat -f hal/runtime/Dockerfile .
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade pip
+      - run: pip install pytest
+      - run: pytest -q tests/unit
