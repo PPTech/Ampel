@@ -137,14 +137,16 @@ if git show-ref --verify --quiet "refs/remotes/$REMOTE/$TARGET_BRANCH"; then
   git merge --ff-only "$REMOTE/$TARGET_BRANCH"
 fi
 
-latest_remote_branch=""
-while read -r ref; do
-  case "$ref" in
-    "$REMOTE/HEAD"|"$REMOTE/$TARGET_BRANCH") continue ;;
-  esac
-  latest_remote_branch="$ref"
-  break
-done < <(git for-each-ref --sort=-committerdate --format='%(refname:short)' "refs/remotes/$REMOTE")
+latest_remote_branch="$(
+  git for-each-ref --sort=-committerdate --format='%(refname:short)' "refs/remotes/$REMOTE" \
+  | while read -r ref; do
+      case "$ref" in
+        "$REMOTE/HEAD"|"$REMOTE/$TARGET_BRANCH") continue ;;
+      esac
+      printf '%s\n' "$ref"
+    done \
+  | head -n 1
+)"
 
 if [[ -z "$latest_remote_branch" ]]; then
   log "no remote branch found to merge"
