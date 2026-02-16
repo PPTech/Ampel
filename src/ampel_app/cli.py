@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Traffic AI Assist - Real Agent Core
-Version: 0.9.18
+Version: 0.9.19
 License: MIT
 Code generated with support from CODEX and CODEX CLI.
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -34,7 +34,7 @@ from ampel_app.server.http_api import health_extensions
 from ampel_app.storage.db import retention_cleanup
 
 APP_NAME = "traffic-ai-assist"
-SEMVER = "0.9.18"
+SEMVER = "0.9.19"
 APP_START_TS = int(time.time())
 
 GEO_COORD_PATTERN = re.compile(r"(?<!\d)([-+]?\d{1,3}\.\d{4,})\s*,\s*([-+]?\d{1,3}\.\d{4,})(?!\d)")
@@ -191,6 +191,31 @@ class DatasetRegistry:
         },
     )
 
+    LICENSE_COMPATIBLE_KEYWORDS: tuple[str, ...] = (
+        "mit",
+        "apache",
+        "bsd",
+        "cc-by",
+        "cc by",
+        "public domain",
+        "open data",
+        "research",
+        "academic",
+        "non-commercial",
+        "dataset terms",
+        "vistas",
+    )
+
+    @classmethod
+    def is_license_compatible(cls, license_text: str) -> bool:
+        low = (license_text or "").strip().lower()
+        if not low:
+            return False
+        blocked = ["proprietary-only", "unknown", "all rights reserved"]
+        if any(x in low for x in blocked):
+            return False
+        return any(k in low for k in cls.LICENSE_COMPATIBLE_KEYWORDS)
+
     @classmethod
     def datasets(cls) -> tuple[dict[str, str], ...]:
         if cls.MANIFEST_PATH.exists():
@@ -199,15 +224,15 @@ class DatasetRegistry:
                 rows = obj.get("datasets", [])
                 cleaned: list[dict[str, str]] = []
                 for row in rows:
-                    cleaned.append(
-                        {
-                            "name": str(row.get("name", "unknown")),
-                            "scope": str(row.get("scope", "unknown")),
-                            "license": str(row.get("license", "unknown")),
-                            "url": str(row.get("url", "")),
-                            "usage": str(row.get("usage", "")),
-                        }
-                    )
+                    item = {
+                        "name": str(row.get("name", "unknown")),
+                        "scope": str(row.get("scope", "unknown")),
+                        "license": str(row.get("license", "unknown")),
+                        "url": str(row.get("url", "")),
+                        "usage": str(row.get("usage", "")),
+                    }
+                    if cls.is_license_compatible(item["license"]):
+                        cleaned.append(item)
                 return tuple(cleaned) if cleaned else cls.DEFAULT_DATASETS
             except (json.JSONDecodeError, OSError, TypeError, ValueError):
                 return cls.DEFAULT_DATASETS
@@ -369,6 +394,8 @@ class DatasetBootstrapper:
         cur = self.db.conn.cursor()
         now = int(time.time())
         for d in DatasetRegistry.datasets():
+            if not DatasetRegistry.is_license_compatible(str(d.get("license", ""))):
+                continue
             cur.execute(
                 """
                 INSERT INTO external_dataset_catalog(dataset_name,scope,license,source_url,synced_at,usage_reason)
@@ -753,19 +780,19 @@ def menu_html() -> str:
     html = """<!doctype html>
 <html><head><meta charset='utf-8'><title>__APP__ menu v__VER__</title>
 <style>
-body{font-family:Arial;background:#0f1117;color:#ebebeb;margin:0;padding:0}
-header{padding:14px;background:#1a2236}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:14px}
-.card{background:#161d2e;border:1px solid #334;border-radius:10px;padding:12px}
-a{color:#83b8ff;text-decoration:none;font-weight:bold}
-small{color:#b9c6dd}
+body{font-family:Inter,Segoe UI,Arial;background:linear-gradient(140deg,#0a1020,#111a33);color:#ebebeb;margin:0;padding:0}
+header{padding:16px;background:#192746;border-bottom:1px solid #32538a}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;padding:16px}
+.card{background:rgba(22,29,46,0.92);border:1px solid #34507f;border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,0.25)}
+a{color:#8fcbff;text-decoration:none;font-weight:700}
+small{color:#c5d7f0}
 </style></head><body>
-<header><strong>__APP__ Menu v__VER__</strong></header>
+<header><strong>🚦 __APP__ Menu v__VER__</strong> · Modern UX Hub</header>
 <div class='grid'>
-  <div class='card'><a href='/dashboard'>Dashboard</a><br><small>Visual demo app with map + camera + lamp simulation.</small></div>
-  <div class='card'><a href='/developer'>Developer Mode</a><br><small>Live camera + object guess labels.</small></div>
-  <div class='card'><a href='/datasets'>Datasets</a><br><small>Visual card list with legal and count metadata.</small></div>
-  <div class='card'><a href='/settings'>Settings</a><br><small>Run checks/import/train with UI buttons.</small></div>
+  <div class='card'><a href='/dashboard'>📺 Dashboard</a><br><small>Live detection, map context, alert lamp and agent output.</small></div>
+  <div class='card'><a href='/developer'>🛠 Developer Mode</a><br><small>Realtime camera object debugging and model assist checks.</small></div>
+  <div class='card'><a href='/datasets'>🗂 Dataset Manager</a><br><small>License-compatible catalog, import/update/delete operations.</small></div>
+  <div class='card'><a href='/settings'>⚙️ Professional Settings</a><br><small>Operational controls, security checks, A/B and health routines.</small></div>
   <div class='card'><a href='/architecture'>Architecture</a><br><small>Mobile integration path for Android/iOS/CarPlay/AAOS.</small></div>
   <div class='card'><a href='/health'>Health</a><br><small>Service status endpoint.</small></div>
 </div>
@@ -804,21 +831,71 @@ def dataset_stats() -> dict[str, object]:
 
 
 def datasets_html() -> str:
-    cards = []
-    for row in DatasetRegistry.datasets():
-        cards.append(
-            f"<div class='card'><h3>{row['name']}</h3><p><b>Scope:</b> {row.get('scope','')}</p><p><b>License:</b> {row.get('license','')}</p><p><b>Usage:</b> {row.get('usage','')}</p><p><b>Sample count:</b> {row.get('sample_count','unknown')}</p><p><a href='{row.get('url','')}' target='_blank'>source</a></p></div>"
-        )
-    joined = "".join(cards)
     summary = dataset_stats()
     html = """<!doctype html><html><head><meta charset='utf-8'><title>__APP__ datasets</title>
-<style>body{font-family:Arial;background:#0f1117;color:#eee;margin:0}header{background:#1a2236;padding:12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;padding:12px}.card{background:#161d2e;border:1px solid #334;padding:10px;border-radius:8px}a{color:#8ec1ff}</style>
-</head><body><header><a href='/menu' style='color:#8ec1ff'>Menu</a> · Datasets · total datasets: __TOTAL__ · known samples: __KNOWN__</header><div class='grid'>__CARDS__</div></body></html>"""
+<style>
+body{font-family:Inter,Segoe UI,Arial;background:#0f1117;color:#eee;margin:0}
+header{background:#1a2236;padding:12px}
+.wrap{padding:12px}
+.card{background:#161d2e;border:1px solid #334;padding:12px;border-radius:10px;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;background:#0e1422}
+th,td{border:1px solid #2f456e;padding:8px;text-align:left}
+th{background:#1f2d47}
+button,input{padding:8px;margin:4px}
+.ok{color:#79f2a4}.bad{color:#ff8d8d}
+</style>
+</head><body><header><a href='/menu' style='color:#8ec1ff'>Menu</a> · Dataset Manager · total datasets: __TOTAL__ · known samples: __KNOWN__</header>
+<div class='wrap'>
+  <div class='card'>
+    <h3>Imported / Active Datasets</h3>
+    <p>Only license-compatible datasets are allowed in professional mode.</p>
+    <button onclick='refreshDatasets()'>Refresh</button>
+    <button onclick='syncDatasets()'>Sync Compatible Defaults</button>
+    <div id='tbl'></div>
+  </div>
+  <div class='card'>
+    <h3>Dataset Import / Update</h3>
+    <input id='dsName' placeholder='Dataset name'>
+    <input id='dsScope' placeholder='Scope'>
+    <input id='dsLicense' placeholder='License (e.g. Apache-2.0, CC-BY-4.0)'>
+    <input id='dsUrl' placeholder='Source URL'>
+    <input id='dsUsage' placeholder='Usage note'>
+    <button onclick='importDataset()'>Import/Update</button>
+  </div>
+  <div class='card'>
+    <h3>Dataset Delete</h3>
+    <input id='delName' placeholder='Dataset name to delete'>
+    <button onclick='deleteDataset()'>Delete Dataset</button>
+    <pre id='out'>Ready.</pre>
+  </div>
+</div>
+<script>
+async function refreshDatasets(){
+  const r=await fetch('/ops/datasets/list'); const d=await r.json();
+  const rows=d.datasets||[];
+  let html='<table><tr><th>Name</th><th>Scope</th><th>License</th><th>Compatible</th><th>Source</th></tr>';
+  rows.forEach((x)=>{html+=`<tr><td>${x.dataset_name||x.name||''}</td><td>${x.scope||''}</td><td>${x.license||''}</td><td class='${x.license_compatible?'ok':'bad'}'>${x.license_compatible?'yes':'no'}</td><td><a href='${x.source_url||x.url||'#'}' target='_blank'>link</a></td></tr>`;});
+  html+='</table>'; document.getElementById('tbl').innerHTML=html;
+}
+async function syncDatasets(){
+  const r=await fetch('/ops/sync-datasets',{method:'POST'}); const d=await r.json();
+  document.getElementById('out').textContent=JSON.stringify(d,null,2); refreshDatasets();
+}
+async function importDataset(){
+  const payload={name:dsName.value,scope:dsScope.value,license:dsLicense.value,url:dsUrl.value,usage:dsUsage.value};
+  const r=await fetch('/ops/datasets/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const d=await r.json(); document.getElementById('out').textContent=JSON.stringify(d,null,2); refreshDatasets();
+}
+async function deleteDataset(){
+  const r=await fetch('/ops/datasets/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:delName.value})});
+  const d=await r.json(); document.getElementById('out').textContent=JSON.stringify(d,null,2); refreshDatasets();
+}
+refreshDatasets();
+</script></body></html>"""
     return (
         html.replace("__APP__", APP_NAME)
         .replace("__TOTAL__", str(summary["dataset_count"]))
         .replace("__KNOWN__", str(summary["known_sample_total"]))
-        .replace("__CARDS__", joined)
     )
 
 
@@ -1053,6 +1130,29 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
       bbox:[(p.bbox[0]||0)/Math.max(1,targetW),(p.bbox[1]||0)/Math.max(1,targetH),(p.bbox[2]||0)/Math.max(1,targetW),(p.bbox[3]||0)/Math.max(1,targetH)],
     }));
   }
+  function estimateLightColor(target, bbox){
+    try{
+      const c=document.createElement('canvas');
+      const w=target.videoWidth||target.naturalWidth||640;
+      const h=target.videoHeight||target.naturalHeight||360;
+      c.width=w; c.height=h;
+      const cx=c.getContext('2d');
+      cx.drawImage(target,0,0,w,h);
+      const x=Math.max(0,Math.floor(bbox[0]));
+      const y=Math.max(0,Math.floor(bbox[1]));
+      const bw=Math.max(3,Math.floor(bbox[2]));
+      const bh=Math.max(3,Math.floor(bbox[3]));
+      const data=cx.getImageData(x,y,Math.min(bw,w-x),Math.min(bh,h-y)).data;
+      let r=0,g=0,b=0,n=0;
+      for(let i=0;i<data.length;i+=4){r+=data[i]; g+=data[i+1]; b+=data[i+2]; n+=1;}
+      if(!n){return 'unknown';}
+      r/=n; g/=n; b/=n;
+      if(r>g*1.15 && r>b*1.15){return 'red';}
+      if(g>r*1.12 && g>b*1.05){return 'green';}
+      if(r>80 && g>80 && Math.abs(r-g)<60){return 'yellow';}
+      return 'unknown';
+    }catch(e){return 'unknown';}
+  }
   async function detectWithBrowserModel(target){
     const model=await ensureVisionModel();
     if(!model){return null;}
@@ -1060,10 +1160,11 @@ function lampColor(state){if(state==='red')return '#e53935'; if(state==='green')
     const mapped=preds.filter((p)=>['traffic light','stop sign'].includes((p.class||'').toLowerCase()));
     if(!mapped.length){return null;}
     const hasLight=mapped.find((p)=>String(p.class).toLowerCase()==='traffic light');
-    const guess=hasLight?'red':'unknown';
+    const guess=hasLight?estimateLightColor(target,hasLight.bbox||[0,0,0,0]):'unknown';
+    const msg=(guess==='red')?'RED LIGHT - STOP':(guess==='green')?'GREEN - GO':(guess==='yellow')?'YELLOW - PREPARE':'CAUTION';
     return {
       traffic_light_state:smoothState(guess),
-      message:guess==='red'?'RED LIGHT - STOP':'CAUTION',
+      message:msg,
       objects:toOverlayObjects(mapped,target.videoWidth||target.naturalWidth||640,target.videoHeight||target.naturalHeight||360),
       method:'browser-coco-ssd'
     };
@@ -1241,17 +1342,13 @@ def health_payload(db: DB) -> dict[str, object]:
 
 def settings_html() -> str:
     html = """<!doctype html><html><head><meta charset='utf-8'><title>__APP__ settings</title>
-<style>body{font-family:Arial;background:#0f1117;color:#eee;margin:0}header{background:#1a2236;padding:12px}.wrap{padding:12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}button{padding:10px}pre{background:#0d1119;padding:10px;border-radius:6px;max-height:420px;overflow:auto}</style>
+<style>body{font-family:Inter,Segoe UI,Arial;background:linear-gradient(140deg,#0d1322,#0f1f3d);color:#eee;margin:0}header{background:#1a2236;padding:12px}.wrap{padding:12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.card{background:#18243b;border:1px solid #34517b;border-radius:12px;padding:12px}button{padding:10px;background:#28446f;color:#fff;border:1px solid #4973aa;border-radius:8px;cursor:pointer}button:hover{background:#33568a}pre{background:#0d1119;padding:10px;border-radius:6px;max-height:420px;overflow:auto}</style>
 </head><body><header><a href='/menu' style='color:#8ec1ff'>Menu</a> · Settings</header><div class='wrap'>
 <div class='grid'>
-<button onclick="runOp('/ops/health')">Refresh Health</button>
-<button onclick="runOp('/ops/sync-datasets',true)">Sync Datasets</button>
-<button onclick="runOp('/ops/import-datasets',true)">Import Datasets (Local Metadata)</button>
-<button onclick="runOp('/ops/train-agent',true,{epochs:3})">Train AI Model</button>
-<button onclick="runOp('/ops/ab-test',true)">Run A/B Test</button>
-<button onclick="runOp('/ops/security-check',true)">Run Security Check</button>
-<button onclick="runOp('/ops/clear-data',true)">Clear All Local Data (GDPR Erasure)</button>
-<button onclick="runOp('/ops/ai-models')">Show Core AI Models</button>
+<div class='card'><h3>🩺 System Diagnostics</h3><button onclick="runOp('/ops/health')">Refresh Health</button><button onclick="runOp('/ops/security-check',true)">Run Security Check</button><button onclick="runOp('/ops/ab-test',true)">Run A/B Test</button></div>
+<div class='card'><h3>🧠 AI Operations</h3><button onclick="runOp('/ops/train-agent',true,{epochs:3})">Train AI Model</button><button onclick="runOp('/ops/ai-models')">Show Core AI Models</button></div>
+<div class='card'><h3>🗂 Dataset Operations</h3><button onclick="runOp('/ops/sync-datasets',true)">Sync Compatible Datasets</button><button onclick="runOp('/ops/import-datasets',true)">Import Local Metadata</button><button onclick="window.location='/datasets'">Open Dataset Manager</button></div>
+<div class='card'><h3>🧹 Privacy</h3><button onclick="runOp('/ops/clear-data',true)">Clear All Local Data (GDPR Erasure)</button></div>
 </div><h3>Output</h3><pre id='out'>Click a button to run an operation.</pre></div>
 <script>
 async function runOp(path, post=false, payload={}){
@@ -1564,6 +1661,31 @@ class APIServer:
                 if self.path == "/ops/ai-models":
                     self._send(HTTPStatus.OK, {"core_models": core_ai_models()})
                     return
+                if self.path == "/ops/datasets/list":
+                    cur = db.conn.cursor()
+                    cur.execute(
+                        "SELECT dataset_name, scope, license, source_url, usage_reason, synced_at FROM external_dataset_catalog ORDER BY dataset_name"
+                    )
+                    rows = []
+                    for row in cur.fetchall():
+                        rows.append(
+                            {
+                                "dataset_name": str(row[0]),
+                                "scope": str(row[1]),
+                                "license": str(row[2]),
+                                "source_url": str(row[3]),
+                                "usage": str(row[4]),
+                                "synced_at": int(row[5]),
+                                "license_compatible": DatasetRegistry.is_license_compatible(
+                                    str(row[2])
+                                ),
+                            }
+                        )
+                    self._send(
+                        HTTPStatus.OK,
+                        {"ok": True, "datasets": rows, "count": len(rows), "version": SEMVER},
+                    )
+                    return
                 if self.path == "/architecture":
                     self._send(HTTPStatus.OK, architecture_html(), "text/html")
                     return
@@ -1662,6 +1784,65 @@ class APIServer:
                             "returncode": proc.returncode,
                             "stdout": proc.stdout[-1200:],
                             "stderr": proc.stderr[-1200:],
+                        },
+                    )
+                    return
+                if self.path == "/ops/datasets/import":
+                    params = self._json_body()
+                    name = str(params.get("name", "")).strip()
+                    scope = str(params.get("scope", "unknown")).strip()
+                    license_text = str(params.get("license", "unknown")).strip()
+                    source_url = str(params.get("url", "")).strip()
+                    usage = str(params.get("usage", "manual import")).strip()
+                    if not name:
+                        self._send(HTTPStatus.BAD_REQUEST, {"ok": False, "error": "name_required"})
+                        return
+                    if not DatasetRegistry.is_license_compatible(license_text):
+                        self._send(
+                            HTTPStatus.BAD_REQUEST,
+                            {
+                                "ok": False,
+                                "error": "license_not_compatible",
+                                "license": license_text,
+                            },
+                        )
+                        return
+                    cur = db.conn.cursor()
+                    cur.execute(
+                        """
+                        INSERT INTO external_dataset_catalog(dataset_name,scope,license,source_url,synced_at,usage_reason)
+                        VALUES(?,?,?,?,?,?)
+                        ON CONFLICT(dataset_name)
+                        DO UPDATE SET scope=excluded.scope, license=excluded.license, source_url=excluded.source_url, synced_at=excluded.synced_at, usage_reason=excluded.usage_reason
+                        """,
+                        (name, scope, license_text, source_url, int(time.time()), usage),
+                    )
+                    db.conn.commit()
+                    self._send(
+                        HTTPStatus.OK,
+                        {"ok": True, "action": "dataset-import", "dataset": name},
+                    )
+                    return
+                if self.path == "/ops/datasets/delete":
+                    params = self._json_body()
+                    name = str(params.get("name", "")).strip()
+                    if not name:
+                        self._send(HTTPStatus.BAD_REQUEST, {"ok": False, "error": "name_required"})
+                        return
+                    cur = db.conn.cursor()
+                    cur.execute(
+                        "DELETE FROM external_dataset_catalog WHERE dataset_name=?", (name,)
+                    )
+                    deleted = int(cur.rowcount)
+                    cur.execute("DELETE FROM demo_sample_frames WHERE dataset_name=?", (name,))
+                    db.conn.commit()
+                    self._send(
+                        HTTPStatus.OK,
+                        {
+                            "ok": True,
+                            "action": "dataset-delete",
+                            "dataset": name,
+                            "deleted": deleted,
                         },
                     )
                     return

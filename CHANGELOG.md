@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.19] - 2026-02-16
+### Added
+- Professional Dataset Manager with live imported-catalog table, license-compatibility validation, and import/delete controls.
+- Dataset API endpoints: `/ops/datasets/list`, `/ops/datasets/import`, `/ops/datasets/delete`.
+
+### Changed
+- Dashboard browser-side color inference now estimates red/yellow/green from detected traffic-light ROI to reduce wrong color messages during media playback.
+- Settings and menu UI refreshed with modern interactive card layout and workflow grouping.
+- Dataset sync pipeline now keeps only license-compatible sources in active catalog.
+
 ## [0.9.18] - 2026-02-16
 ### Added
 - Dashboard browser-side object detection assist (COCO-SSD) for photo/video/youtube modes to produce variable detections instead of static placeholder outputs.

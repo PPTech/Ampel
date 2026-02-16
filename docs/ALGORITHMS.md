@@ -161,3 +161,15 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
    - Uses payload-derived digest variance so fallback confidences are not hard-coded constants.
 4. Compatibility CI gates
    - Provides explicit migration workflows (`main_pipeline`, `main/safety-ci`) to satisfy protected-branch required checks.
+
+
+## Phase 7.5 Professional Dataset Governance and Color-State Inference
+
+1. License compatibility gate
+   - Catalog sync/import validates license text against allowed compatibility keywords.
+2. Dataset lifecycle API
+   - Supports list/import/delete for active datasets used by runtime and UI.
+3. Browser ROI color-state estimator
+   - Reads detected traffic-light region pixels and derives red/yellow/green state from channel dominance.
+4. Professional operations UX
+   - Settings and dataset views grouped by workflow (diagnostics, AI ops, data governance, privacy).

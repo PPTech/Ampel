@@ -1,6 +1,6 @@
 # Ampel — Samsung-First Traffic Light Assistant (PR-0)
 
-Version: 0.9.18  
+Version: 0.9.19  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)  
@@ -132,3 +132,38 @@ Ampel is being migrated from Python prototype scripts to a production-grade Sams
 | Google Map + Traffic Lamp | Real location display + lamp state | Geolocation permission + event update |
 | Interactive Demo Controls | Analyze photo/video/youtube actions | API response + rendered overlay |
 | Agent output | Structured JSON output for each action | Runtime panel + endpoint payload |
+
+
+## 📘 Professional Documentation Index
+
+| 📄 File | Purpose | Audience | Update Rule |
+|---|---|---|---|
+| `README.md` | Product overview, install/run, supported modes | Users + Maintainers | Update every release |
+| `CHANGELOG.md` | Versioned release notes | Maintainers + QA | Mandatory each version |
+| `MEMORY.md` | Persistent engineering decisions | AI/Agent + Team | Append after major behavior changes |
+| `docs/ALGORITHMS.md` | Algorithm and flow details | Engineering + QA | Append each new pipeline |
+| `.github/workflows/*.yml` | CI/CD checks and quality gates | DevOps + Maintainers | Keep compatible with required branch checks |
+
+## 🧰 Install / Run Matrix
+
+| Task | Command | Expected Output |
+|---|---|---|
+| Install dev deps | `pip install -r proto/python/requirements.txt` | Python runtime dependencies ready |
+| Run dashboard | `PYTHONPATH=src python3 -m ampel_app.cli --serve --host 0.0.0.0 --port 8090` | Web UI available |
+| Unit tests | `pytest -q tests/unit` | Core unit suite passes |
+| A/B test | `python3 traffic_ai_assist.py --ab-test` | Variant comparison JSON |
+| Security check | `python3 traffic_ai_assist.py --security-check` | Security references and pass/fail |
+
+## 🎯 Supported Media Input Formats
+
+| Type | Formats |
+|---|---|
+| Image upload | jpeg, png, gif, bmp, webp, tiff, heic, heif, avif |
+| Video upload | browser-supported `video/*` |
+| URL analysis | YouTube (`youtube.com`, `youtu.be`) |
+
+## 🗂 Dataset Governance Rules
+
+- Only datasets with license-compatible metadata are added to active catalog.
+- Dataset manager supports import/update/delete operations from UI and API.
+- Demo frames and catalog are local-only and can be erased via GDPR clear-data flow.
