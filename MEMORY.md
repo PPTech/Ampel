@@ -1,6 +1,6 @@
 # MEMORY.md
 
-Version: 0.9.11  
+Version: 0.9.12  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
@@ -42,3 +42,6 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 - PR-4 Android MVP introduces CameraX + TFLite + Compose overlay stack under `mobile/android`.
 
 - PR-5 adds Android integrity checks, encrypted preferences, edge-only enforcement, and local data nuke controls.
+
+- PR-6 adds unified monorepo CI/CD with predictive test selection and self-healing diagnostics artifacts.
+- Image upload analyzer now accepts broad image formats and reports explicit format-detection errors.

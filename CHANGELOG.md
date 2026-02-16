@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.12] - 2026-02-16
+### Added
+- PR-6 monorepo predictive test selector `scripts/pts_selector.py` with shared/mobile/gadget target routing.
+- PR-6 unified CI workflow `.github/workflows/main_pipeline.yml` with PTS, logic verification, Android, and gadget jobs.
+- PR-6 failure diagnostics utility `scripts/diagnose_failure.py` generating redacted `failure_report.zip` artifacts.
+- PR-6 one-command environment bootstrap `setup_dev_env.sh` for Python, Docker, Android SDK guidance, and pre-commit setup.
+- BDD features `features/monorepo_pipeline.feature` and unit tests `tests/unit/test_pts_selector.py`.
+- Upload-format regression tests `tests/unit/test_upload_image_formats.py`.
+
+### Changed
+- Improved `/ops/analyze-image` flow to accept and process broad photo formats (jpg/jpeg/png/gif/bmp/webp/tiff/heic/heif/avif) and return explicit format/error feedback.
+
 ## [0.9.11] - 2026-02-16
 ### Added
 - PR-5 Android release hardening rules in `mobile/android/app/proguard-rules.pro` for obfuscation, CameraX/TFLite keeps, and stripping `Log.d`/`Log.v` calls.

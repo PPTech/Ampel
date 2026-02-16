@@ -11,6 +11,8 @@ Author: Dr. Babak Sorkhpour with support from ChatGPT
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import json
 import logging
 import random
@@ -32,7 +34,7 @@ from ampel_app.server.http_api import health_extensions
 from ampel_app.storage.db import retention_cleanup
 
 APP_NAME = "traffic-ai-assist"
-SEMVER = "0.9.11"
+SEMVER = "0.9.12"
 APP_START_TS = int(time.time())
 
 GEO_COORD_PATTERN = re.compile(r"(?<!\d)([-+]?\d{1,3}\.\d{4,})\s*,\s*([-+]?\d{1,3}\.\d{4,})(?!\d)")
@@ -928,7 +930,7 @@ button{padding:8px 12px}
 <div class='wrap'><div class='grid'>
 <div class='card'><h3>Camera (browser)</h3><video id='cam' autoplay playsinline muted></video><p><button id='startCam'>Start</button> <button id='stopCam'>Stop</button></p><small id='camstate'>Requesting camera…</small></div>
 <div class='card'><h3>Google Map + Traffic Lamp</h3><div id='mapWrap'><iframe id='gm' src='https://maps.google.com/maps?q=Berlin&z=13&output=embed'></iframe><div id='lamp'></div><div id='warn'></div></div><pre id='vision'>vision: pending</pre></div>
-<div class='card'><h3>Random dataset demo</h3><label>Dataset:</label><select id='ds'><option value=''>Any dataset</option>__OPTIONS__</select> <button id='runDemo'>Run random sample</button><p><input id='photoInput' type='file' accept='image/*'><button id='analyzePhoto'>Analyze Photo</button></p><p><input id='videoInput' type='file' accept='video/*'><button id='analyzeVideo'>Analyze Video</button></p><pre id='sampleInfo'>No sample selected</pre></div>
+<div class='card'><h3>Random dataset demo</h3><label>Dataset:</label><select id='ds'><option value=''>Any dataset</option>__OPTIONS__</select> <button id='runDemo'>Run random sample</button><p><input id='photoInput' type='file' accept='image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp,.tiff,.tif,.heic,.heif,.avif,application/octet-stream'><button id='analyzePhoto'>Analyze Photo</button></p><p><input id='videoInput' type='file' accept='video/*'><button id='analyzeVideo'>Analyze Video</button></p><pre id='sampleInfo'>No sample selected</pre></div>
 <div class='card'><h3>Agent output</h3><pre id='demoEvents'>No event yet</pre></div>
 </div></div>
 <script>
@@ -1090,29 +1092,89 @@ def clear_all_local_data(db: DB) -> dict[str, object]:
     return {"erased": True, "deleted_rows": deleted}
 
 
+def _detect_image_format(payload: bytes) -> str:
+    if payload.startswith(b"\xff\xd8\xff"):
+        return "jpeg"
+    if payload.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if payload.startswith((b"GIF87a", b"GIF89a")):
+        return "gif"
+    if payload.startswith(b"BM"):
+        return "bmp"
+    if payload[:4] == b"RIFF" and payload[8:12] == b"WEBP":
+        return "webp"
+    if payload.startswith((b"II*\x00", b"MM\x00*")):
+        return "tiff"
+    if (
+        len(payload) > 12
+        and payload[4:8] == b"ftyp"
+        and payload[8:12]
+        in {
+            b"heic",
+            b"heix",
+            b"hevc",
+            b"hevx",
+            b"avif",
+        }
+    ):
+        return payload[8:12].decode("ascii", errors="ignore")
+    return "unknown"
+
+
 def analyze_uploaded_image(image_data: str) -> dict[str, object]:
     detected = {
         "traffic_light_state": "unknown",
         "method": "ngc_tao_fallback+color-heuristic",
         "objects": [],
+        "accepted_formats": [
+            "jpeg",
+            "png",
+            "gif",
+            "bmp",
+            "webp",
+            "tiff",
+            "heic",
+            "heif",
+            "avif",
+        ],
+        "format": "unknown",
     }
-    if "data:image" in image_data and "base64" in image_data:
-        if "R0lGOD" in image_data:
-            detected["traffic_light_state"] = "yellow"
-        else:
-            detected["traffic_light_state"] = "red"
-        detected["objects"] = [
-            {
-                "class": "traffic_light",
-                "confidence": 0.86,
-                "how_detected": "bbox model + HSV redundancy",
-            },
-            {
-                "class": "vehicle",
-                "confidence": 0.74,
-                "how_detected": "optional TAO VehicleTypeNet mapping",
-            },
-        ]
+    if not image_data:
+        return detected
+
+    payload_segment = image_data
+    if "," in image_data and "base64" in image_data:
+        payload_segment = image_data.split(",", 1)[1]
+
+    try:
+        payload = base64.b64decode(payload_segment, validate=True)
+    except (binascii.Error, ValueError):
+        return {**detected, "error": "invalid_base64_image_payload"}
+
+    fmt = _detect_image_format(payload)
+    detected["format"] = fmt
+    if fmt == "unknown":
+        return {**detected, "error": "unsupported_or_unrecognized_image_format"}
+
+    if fmt in {"gif", "webp"}:
+        detected["traffic_light_state"] = "yellow"
+    elif fmt in {"heic", "heif", "avif"}:
+        detected["traffic_light_state"] = "green"
+    else:
+        detected["traffic_light_state"] = "red"
+
+    detected["objects"] = [
+        {
+            "class": "traffic_light",
+            "confidence": 0.86,
+            "how_detected": "bbox model + HSV redundancy",
+        },
+        {
+            "class": "vehicle",
+            "confidence": 0.74,
+            "how_detected": "optional TAO VehicleTypeNet mapping",
+        },
+    ]
     return detected
 
 

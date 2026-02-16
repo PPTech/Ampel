@@ -87,3 +87,13 @@ Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)
 3. SecureStorage persists sensitive settings using Android Keystore-backed `MasterKey` and encrypted shared preferences.
 4. Privacy manager enforces edge-only outbound policy: non-whitelisted domains or raw media payload attempts are blocked.
 5. GDPR kill-switch erases secure prefs, shared prefs, databases, cache, and log artifacts on demand.
+
+
+## PR-6 Monorepo CI Orchestration Flow
+
+1. `pts_selector.py` evaluates changed paths and emits platform-job flags.
+2. Workflow executes logic verification always for deterministic rule consistency.
+3. Android build/tests run only when `mobile/**` or shared contracts change.
+4. Gadget docker/integration tests run only when `gadget/**` or shared contracts change.
+5. On failures, `diagnose_failure.py` packages failed scenario hints, redacted logs, and git diff into `failure_report.zip`.
+6. `/ops/analyze-image` decodes base64 payloads, detects file signatures (jpeg/png/gif/bmp/webp/tiff/heic/heif/avif), and returns structured detection response/error.

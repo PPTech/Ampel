@@ -1,6 +1,6 @@
 # Ampel — Samsung-First Traffic Light Assistant (PR-0)
 
-Version: 0.9.11  
+Version: 0.9.12  
 License: MIT  
 Code generated with support from CODEX and CODEX CLI.  
 Owner / Idea / Management: Dr. Babak Sorkhpour (https://x.com/Drbabakskr)  
@@ -70,3 +70,12 @@ Ampel is being migrated from Python prototype scripts to a production-grade Sams
 - Runtime tamper detection in `IntegrityManager.kt` (signature verification + Knox/TIMA capability check).
 - Encrypted preference storage via `SecureStorage.kt` (`EncryptedSharedPreferences` + `MasterKey`).
 - Privacy manager kill-switch in `PrivacyManager.kt` for GDPR erase and edge-only request enforcement.
+
+
+## PR-6 Unified CI/CD & Test Automation
+
+- Unified monorepo workflow: `.github/workflows/main_pipeline.yml`
+- Predictive test selection: `scripts/pts_selector.py`
+- Failure diagnostics artifacting: `scripts/diagnose_failure.py`
+- One-command setup: `setup_dev_env.sh`
+- Upload analyzer now accepts broad image formats (including webp/heic/avif) in demo API path.
